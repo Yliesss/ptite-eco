@@ -110,6 +110,49 @@ nav.tabs.n8 button{flex:0 0 64px;font-size:.62rem;padding:8px 0}
 .choix-st:focus-within{outline:3px solid var(--sky);outline-offset:2px}
 .pt{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 .leaflet-container{font:inherit}
+/* ================= Ordinateur : menu à gauche, contenu sur deux colonnes ================= */
+aside.side{display:none}
+@media (hover:hover){.item:hover,.tuile:hover{filter:brightness(.97)}.btn:hover{filter:brightness(1.06)}}
+@media (min-width:1000px){
+  nav.bottom{display:none!important}
+  #v-commerces .card img,#v-campus .card img{max-height:300px}
+  aside.side{display:flex;flex-direction:column;gap:6px;position:fixed;inset:0 auto 0 0;width:260px;z-index:20;padding:22px 16px;background:var(--surface);border-right:1px solid var(--line);overflow-y:auto}
+  .side-brand{display:flex;align-items:center;gap:12px;border:0;background:none;padding:4px 6px 14px;font:inherit;cursor:pointer;color:var(--ink);text-align:left}
+  .side-brand svg{width:44px;height:44px;border-radius:13px;flex:none}
+  .side-brand b{font-family:var(--f-display);font-size:1.35rem}
+  .side-brand em{font-style:normal;color:var(--coral)}
+  .side-ajout{display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:16px;padding:13px;margin-bottom:10px;background:linear-gradient(140deg,#ff8a5c,#ff5f7e);color:#fff;font:inherit;font-weight:900;font-size:1rem;cursor:pointer;box-shadow:0 8px 20px rgb(255 95 126/.35)}
+  .side-ajout svg{width:22px;height:22px;stroke-width:2.6}
+  .side-liste{display:flex;flex-direction:column;gap:2px}
+  .side-liste button,.side-bas button{display:flex;align-items:center;gap:12px;border:0;background:none;border-radius:14px;padding:11px 12px;font:inherit;font-weight:800;font-size:.95rem;color:var(--muted);cursor:pointer;text-align:left}
+  .side-liste button svg,.side-bas button svg{width:22px;height:22px;flex:none}
+  .side-liste button:hover,.side-bas button:hover{background:var(--soft);color:var(--ink)}
+  .side-liste button[aria-current="page"]{background:var(--coral-s);color:var(--neg)}
+  .side-bas{margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:12px;border-top:1px solid var(--line)}
+  .wrap{max-width:1180px;margin:0 0 0 260px;padding:28px 40px 60px}
+  @media (min-width:1500px){.wrap{margin-left:calc(260px + (100vw - 260px - 1180px)/2)}}
+  .topbar .brand{display:none}
+  .topbar h1{font-size:2rem}
+  /* tableaux de bord sur deux colonnes */
+  #v-accueil,#v-abos,#v-foyer,#v-etudes,#v-admin,#v-repas,#v-prix{display:block;columns:2;column-gap:22px}
+  #v-accueil>*,#v-abos>*,#v-foyer>*,#v-etudes>*,#v-admin>*,#v-repas>*,#v-prix>*{break-inside:avoid;margin-bottom:22px;width:100%}
+  #v-accueil>.hero,#v-accueil>.annonce,#v-admin>.kpis,#v-etudes>.mur-lien,#v-prix>.btn,#v-abos>.btn{column-span:all}
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  /* fils d'actualité : une colonne centrée, plus lisible */
+  #v-campus,#v-commerces,#v-courses{max-width:760px}
+  /* fenêtres : au centre de l'écran */
+  .sheet-bg{align-items:center;padding:24px}
+  .sheet{max-width:620px;border-radius:26px;padding:26px 28px;max-height:88vh}
+  .tuiles{grid-template-columns:repeat(3,1fr)}
+}
+/* page de présentation sur grand écran */
+@media (min-width:1000px){
+  .landing{max-width:1180px!important;display:grid!important;grid-template-columns:1fr 1fr;column-gap:56px;row-gap:22px;align-items:start;padding-top:56px!important}
+  .landing>*{grid-column:1}
+  .landing>.grid2{grid-column:2;grid-row:1 / span 7;align-self:center}
+  .landing h1{font-size:3.4rem!important}
+}
+
 /* ---- Navigation du bas ---- */
 .topbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
 .brand{border:0;padding:0;background:none;width:44px;height:44px;flex:none;cursor:pointer}
@@ -706,7 +749,7 @@ function startApp(){
     </header>
     ${TABS.map(t=>`<section id="v-${t[0]}" class="stack" hidden></section>`).join("")}
     <section id="v-admin" class="stack" hidden></section>
-  </div>${navBasHtml()}`;
+  </div>${navBasHtml()}${sideHtml()}`;
   show(tab);
   setTimeout(()=>{if(!a("sheet-root").innerHTML&&!a("coach"))suiteAccueil()},600);
 }
@@ -1814,13 +1857,24 @@ const MARK=LOGO.match(/<svg[\s\S]*?<\/svg>/)[0];
 const ICO={accueil:'<path d="M4 11l8-7 8 7v9H4z"/>',courses:'<path d="M3 4h2l2.4 11h10.2L20 8H6.2"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/>',
   plus:'<rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/>',
   ajout:'<path d="M12 5v14M5 12h14"/>'};
-const icoTab=id=>(TABS.find(t=>t[0]===id)||[])[3]||ICO[id]||"";
-const nomTab=id=>({abos:"Abos",etudes:"Études"})[id]||(TABS.find(t=>t[0]===id)||[])[1]||id;
+const icoTab=id=>(TABS.find(t=>t[0]===id)||[])[3]||ICO[id]||(id==="admin"?'<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>':"");
+const nomTab=id=>({abos:"Abos",etudes:"Études",admin:"Administration"})[id]||(TABS.find(t=>t[0]===id)||[])[1]||id;
 const ongletsBas=()=>["accueil",estEtudiant()?"etudes":"abos","courses"];
 const ongletsPlus=()=>TABS.map(t=>t[0]).filter(id=>!ongletsBas().includes(id)&&(!["etudes","campus"].includes(id)||estEtudiant()));
 function navBasHtml(){const [t1,t2,t3]=ongletsBas(),b=id=>`<button data-tab="${id}" aria-label="${esc(nomTab(id))}">${svg(icoTab(id))}<span>${esc(nomTab(id))}</span></button>`;
   return `<nav class="bottom" aria-label="Navigation">${b(t1)}${b(t2)}<button class="fab" data-act="ajout" aria-label="Ajouter">${svg(ICO.ajout)}</button>${b(t3)}<button data-act="menu" id="nav-plus" aria-label="Plus de rubriques">${svg(ICO.plus)}<span>Plus</span></button></nav>`}
-function majNavBas(){const bas=ongletsBas();document.querySelectorAll("nav.bottom [data-tab]").forEach(b=>b.dataset.tab===tab?b.setAttribute("aria-current","page"):b.removeAttribute("aria-current"));
+function sideHtml(){
+  const b=id=>`<button data-tab="${id}">${svg(icoTab(id))}<span>${esc(id==="abos"?"Abonnements":nomTab(id))}</span></button>`;
+  return `<aside class="side" aria-label="Menu" data-nav>
+    <button class="side-brand" data-tab="accueil">${MARK}<b>P'tite <em>Éco</em></b></button>
+    <button class="side-ajout" data-act="ajout">${svg(ICO.ajout)} Ajouter</button>
+    <nav class="side-liste">${tabsVisibles().map(t=>b(t[0])).join("")}${ADM.ok?b("admin"):""}</nav>
+    <div class="side-bas">
+      <button data-act="compte"><span class="ico t-sun" style="width:28px;height:28px;font-size:.85rem">${esc(profil.prenom[0]?.toUpperCase()||"?")}</span><span>Mon compte</span></button>
+      <button data-act="guide">${svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/>')}<span>Revoir le tutoriel</span></button>
+    </div></aside>`;
+}
+function majNavBas(){document.querySelectorAll("aside.side [data-tab]").forEach(b=>!b.classList.contains("side-brand")&&b.dataset.tab===tab?b.setAttribute("aria-current","page"):b.removeAttribute("aria-current"));const bas=ongletsBas();document.querySelectorAll("nav.bottom [data-tab]").forEach(b=>b.dataset.tab===tab?b.setAttribute("aria-current","page"):b.removeAttribute("aria-current"));
   const p=a("nav-plus");if(p){if(!bas.includes(tab))p.setAttribute("aria-current","page");else p.removeAttribute("aria-current")}}
 function grilleSheet(titre,sous,items,extra=""){
   const root=a("sheet-root");
@@ -1857,12 +1911,12 @@ const POINTEUR='<svg viewBox="0 0 24 24" fill="#fff" stroke="#1d2547" stroke-wid
 function etapesGuide(){return [
   {t:"Bienvenue sur P'tite Éco !",p:"Je te montre l'essentiel en 30 secondes. Suis le doigt."},
   {sel:".hero",tab:"accueil",t:"Ton reste à vivre",p:"Le chiffre le plus important : ce qu'il te reste pour finir le mois. Il se calcule tout seul."},
-  {sel:"nav.bottom .fab",t:"Le bouton +",p:"Touche-le après un achat ou quand tu reçois de l'argent. Tu peux aussi y scanner un ticket ou un produit.",tap:true},
-  estEtudiant()?{sel:'nav.bottom [data-tab="etudes"]',t:"Ton espace étudiant",p:"Ta fac, les restos U à 1 €, le mur des étudiants (ventes, soirées, infos), les logements Crous et les bourses.",tap:true}
-    :{sel:'nav.bottom [data-tab="abos"]',t:"Tes abonnements",p:"Tous tes prélèvements au même endroit, avec une alerte avant chaque renouvellement.",tap:true},
-  {sel:'nav.bottom [data-tab="courses"]',t:"Tes courses",p:"Ta liste à cocher, partagée en direct avec tes proches, et le magasin le moins cher pour chaque produit.",tap:true},
-  {sel:"#nav-plus",t:"Tout le reste",p:"Le foyer à deux, les commerces du quartier, les repas pas chers, les prix des magasins…",tap:true},
-  {sel:'header [data-act="compte"]',t:"Ton compte",p:"Mode sombre, ta situation, tes données… et ce tutoriel, à revoir quand tu veux."},
+  {sel:'nav.bottom .fab, aside.side .side-ajout',t:"Le bouton +",p:"Touche-le après un achat ou quand tu reçois de l'argent. Tu peux aussi y scanner un ticket ou un produit.",tap:true},
+  estEtudiant()?{sel:'nav.bottom [data-tab="etudes"], aside.side .side-liste [data-tab="etudes"]',t:"Ton espace étudiant",p:"Ta fac, les restos U à 1 €, le mur des étudiants (ventes, soirées, infos), les logements Crous et les bourses.",tap:true}
+    :{sel:'nav.bottom [data-tab="abos"], aside.side .side-liste [data-tab="abos"]',t:"Tes abonnements",p:"Tous tes prélèvements au même endroit, avec une alerte avant chaque renouvellement.",tap:true},
+  {sel:'nav.bottom [data-tab="courses"], aside.side .side-liste [data-tab="courses"]',t:"Tes courses",p:"Ta liste à cocher, partagée en direct avec tes proches, et le magasin le moins cher pour chaque produit.",tap:true},
+  {sel:"#nav-plus, aside.side .side-liste",t:"Tout le reste",p:"Le foyer à deux, les commerces du quartier, les repas pas chers, les prix des magasins…",tap:true},
+  {sel:'header [data-act="compte"], aside.side .side-bas [data-act="compte"]',t:"Ton compte",p:"Mode sombre, ta situation, tes données… et ce tutoriel, à revoir quand tu veux."},
   {t:"C'est parti !",p:"Commence par toucher le bouton + pour ajouter l'argent que tu as reçu ce mois-ci.",fin:true}
 ]}
 function tutoriel(){
@@ -1876,7 +1930,7 @@ function tutoriel(){
   document.body.appendChild(el);
   const spot=a("co-spot"),doigt=a("co-doigt"),bulle=a("co-bulle");
   const place=()=>{
-    const e=E[i],cible=e.sel&&document.querySelector(e.sel);
+    const e=E[i],cible=e.sel&&[...document.querySelectorAll(e.sel)].find(x=>x.offsetParent!==null&&x.getBoundingClientRect().width>0);
     a("co-n").textContent=`Étape ${i+1} sur ${E.length}`;a("co-t").textContent=e.t;a("co-p").textContent=e.p;
     a("co-dots").innerHTML=E.map((_,k)=>`<span style="width:${k===i?18:6}px;height:6px;border-radius:3px;background:${k===i?"var(--coral)":"var(--line)"};transition:width .3s"></span>`).join("");
     a("tu-p").hidden=!i;a("tu-n").textContent=e.fin?"C'est parti !":"Suivant";
@@ -1890,6 +1944,8 @@ function tutoriel(){
     const enBas=r.top+r.height/2>H/2,bh=bulle.offsetHeight;
     bulle.style.left=Math.min(W-bw-16,Math.max(16,r.left+r.width/2-bw/2))+"px";
     bulle.style.top=(enBas?Math.max(16,r.top-m-bh-56):Math.min(H-bh-16,r.bottom+m+60))+"px";
+    // menu à gauche (ordinateur) : la bulle se place à droite de l'élément
+    if(r.right<W*.35){bulle.style.left=(r.right+m+70)+"px";bulle.style.top=Math.min(H-bh-16,Math.max(16,r.top+r.height/2-bh/2))+"px";doigt.style.left=(r.right-30)+"px";doigt.style.top=(r.top+Math.min(r.height/2,40))+"px"}
   };
   const fin=()=>{el.remove();removeEventListener("resize",place);if(!S.tutoVu){S.tutoVu=iso(new Date());persist()}};
   a("tu-x").onclick=fin;a("tu-n").onclick=()=>{if(E[i].fin)fin();else{i++;place()}};a("tu-p").onclick=()=>{if(i){i--;place()}};
@@ -1926,7 +1982,7 @@ const ADM={ok:false,annonce:null,unsub:null,data:null,charge:false};
 function suivreAnnonce(){
   const f=F();if(ADM.unsub)ADM.unsub();
   ADM.unsub=f.onSnapshot(f.doc(f.db,"admin","annonce"),s=>{ADM.annonce=s.exists()?s.data():null;if(tab==="accueil"&&!a("sheet-root")?.innerHTML)render()},()=>{});
-  f.getDoc(f.doc(f.db,"admin","acces")).then(()=>{ADM.ok=true}).catch(()=>{ADM.ok=false});
+  f.getDoc(f.doc(f.db,"admin","acces")).then(()=>{const avant=ADM.ok;ADM.ok=true;const L=document.querySelector("aside.side .side-liste");if(!avant&&L&&!L.querySelector('[data-tab="admin"]')){L.insertAdjacentHTML("beforeend",`<button data-tab="admin">${svg(icoTab("admin"))}<span>Administration</span></button>`);majNavBas()}}).catch(()=>{ADM.ok=false});
 }
 function annonceHtml(){
   const x=ADM.annonce;if(!x||!x.actif||!x.texte)return "";let vu="";try{vu=localStorage.getItem("pm-annonce")||""}catch(e){}if(vu===x.maj)return "";
@@ -2738,7 +2794,7 @@ function screenPresentation(){
     ["pink","Foyer","Budget commun et dépenses partagées : qui doit combien, sans calcul.",'<path d="M4 11l8-7 8 7v9H4z"/>'],
     ["sun","Étudiants","Restos U à 1 €, logements Crous, transports près de chez toi et bourses.",'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>'],
     ["coral","Scan","Tickets de caisse, relevé bancaire et produits : composition et Nutri-Score.",'<path d="M4 7V5h3M17 5h3v2M20 17v2h-3M7 19H4v-2M8 8v8M12 8v8M16 8v8"/>']];
-  document.getElementById("app").innerHTML=`<div style="max-width:560px;margin:0 auto;padding:28px max(20px,env(safe-area-inset-right,0px)) 110px max(20px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:22px">
+  document.getElementById("app").innerHTML=`<div class="landing" style="max-width:560px;margin:0 auto;padding:28px max(20px,env(safe-area-inset-right,0px)) 110px max(20px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:22px">
     ${LOGO}
     <div><h1 style="font-size:2.4rem;line-height:1.05">Petites économies,<br>grande liberté.</h1>
       <p class="muted" style="margin:12px 0 0;font-size:1.05rem">Budget, abonnements, courses, dépenses du foyer et un espace étudiant, dans une seule appli gratuite pensée pour le téléphone.</p></div>
