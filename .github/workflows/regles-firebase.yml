@@ -3,7 +3,7 @@ name: Règles Firebase
 on:
   push:
     branches: [main]
-    paths: [firestore.rules]
+    paths: [firestore.rules, .github/workflows/regles-firebase.yml]
   workflow_dispatch:
 jobs:
   regles:
