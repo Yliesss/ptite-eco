@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function connecte() { return request.auth != null; }
+    function moi() { return request.auth.uid; }
+    // Administrateur : uniquement les comptes listés dans la collection « admins » (créée à la main dans la console Firebase).
+    function admin() { return connecte() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function seulement(champs) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(champs); }
+    function commerceValide(d) {
+      return d.keys().hasOnly(['nom','categorie','description','offre','adresse','lat','lon','gh','tel','site','horaires','photo','independant','maj','cree','signalements'])
+        && d.nom is string && d.nom.size() >= 2 && d.nom.size() <= 60
+        && d.description is string && d.description.size() <= 400
+        && d.offre is string && d.offre.size() <= 80
+        && d.lat is number && d.lon is number
+        && d.gh is string && d.gh.size() == 4
+        && d.photo is string && d.photo.size() < 300000
+        && d.independant == true;
+    }
+    function postValide(d) {
+      return d.keys().hasOnly(['auteur','nom','type','texte','prix','quand','lieu','photo','cree','likes','nbCom','signalements','groupe','groupeNom','groupeType'])
+        && d.auteur == moi()
+        && d.type in ['vente','soiree','info','entraide','discussion']
+        && d.texte is string && d.texte.size() >= 2 && d.texte.size() <= 600
+        && d.nom is string && d.nom.size() <= 40
+        && d.lieu is string && d.lieu.size() <= 80
+        && d.photo is string && d.photo.size() < 300000
+        && d.likes.size() == 0 && d.signalements.size() == 0 && d.nbCom == 0;
+    }
+    function groupeValide(d) {
+      return d.keys().hasOnly(['nom','type','description','photo','createur','admins','abonnes','cree','signalements'])
+        && d.nom is string && d.nom.size() >= 2 && d.nom.size() <= 50
+        && d.type in ['bde','bds','asso','club','autre']
+        && d.description is string && d.description.size() <= 500
+        && d.photo is string && d.photo.size() < 300000
+        && d.admins is list && d.admins.size() >= 1 && d.admins.size() <= 10;
+    }
+
+    match /users/{uid} {
+      allow read, write: if connecte() && moi() == uid;
+    }
+    match /profils/{uid} {
+      allow read: if connecte();
+      allow write: if connecte() && moi() == uid;
+    }
+    match /amities/{id} {
+      allow read: if connecte() && moi() in resource.data.membres;
+      allow create: if connecte() && request.resource.data.de == moi() && moi() in request.resource.data.membres && request.resource.data.statut == "attente";
+      allow update: if connecte() && resource.data.a == moi() && request.resource.data.statut == "ok";
+      allow delete: if connecte() && moi() in resource.data.membres;
+    }
+    match /paniers/{panierId} {
+      allow read, update: if connecte() && moi() in resource.data.membres;
+      allow create: if connecte() && request.resource.data.proprio == moi() && moi() in request.resource.data.membres;
+      allow delete: if connecte() && resource.data.proprio == moi();
+    }
+    match /listes/{listeId} {
+      allow read, update: if connecte() && moi() in resource.data.membres;
+      allow create: if connecte() && request.resource.data.proprio == moi() && moi() in request.resource.data.membres;
+      allow delete: if connecte() && resource.data.proprio == moi();
+      match /articles/{articleId} {
+        allow read, write: if connecte() && moi() in get(/databases/$(database)/documents/listes/$(listeId)).data.membres;
+      }
+    }
+    match /foyers/{foyerId} {
+      allow read, update: if connecte() && moi() in resource.data.membres;
+      allow create: if connecte() && request.resource.data.proprio == moi() && moi() in request.resource.data.membres;
+      allow delete: if connecte() && resource.data.proprio == moi();
+      match /depenses/{depenseId} {
+        allow read, write: if connecte() && moi() in get(/databases/$(database)/documents/foyers/$(foyerId)).data.membres;
+      }
+    }
+    match /prix/{cle} {
+      allow read: if connecte();
+      allow create: if connecte()
+        && request.resource.data.keys().hasOnly(['magasin','produit','prix','date','releves','n','maj'])
+        && cle == request.resource.data.magasin + '__' + request.resource.data.produit
+        && request.resource.data.prix is number && request.resource.data.prix > 0 && request.resource.data.prix < 500
+        && request.resource.data.releves.size() <= 8 && request.resource.data.n == 1;
+      allow update: if connecte()
+        && request.resource.data.keys().hasOnly(['magasin','produit','prix','date','releves','n','maj'])
+        && request.resource.data.magasin == resource.data.magasin && request.resource.data.produit == resource.data.produit
+        && request.resource.data.prix is number && request.resource.data.prix > 0 && request.resource.data.prix < 500
+        && request.resource.data.releves.size() <= 8 && request.resource.data.n == resource.data.n + 1;
+      allow delete: if admin();
+    }
+    match /commerces/{uid} {
+      allow read: if connecte();
+      allow create: if connecte() && moi() == uid && commerceValide(request.resource.data) && request.resource.data.signalements.size() == 0;
+      allow update: if connecte() && moi() == uid && commerceValide(request.resource.data) && request.resource.data.signalements == resource.data.signalements;
+      allow update: if connecte() && moi() != uid && seulement(['signalements']) && request.resource.data.signalements.diff(resource.data.signalements).affectedKeys().hasOnly([moi()]);
+      allow update: if admin() && seulement(['signalements']);
+      allow delete: if connecte() && (moi() == uid || admin());
+    }
+    match /inscriptions/{uid} {
+      allow create: if connecte() && moi() == uid
+        && request.resource.data.keys().hasOnly(['source','interets','statut','date','appareil']);
+      allow read, delete: if admin();
+    }
+    match /admins/{uid} {
+      allow read, write: if false;
+    }
+    match /admin/{docId} {
+      allow read: if admin() || (connecte() && docId == "annonce");
+      allow write: if admin();
+    }
+    match /campus/{univ}/groupes/{gid} {
+      allow read: if connecte();
+      allow create: if connecte() && groupeValide(request.resource.data)
+        && request.resource.data.createur == moi() && moi() in request.resource.data.admins
+        && request.resource.data.abonnes.size() == 0 && request.resource.data.signalements.size() == 0;
+      allow update: if connecte() && moi() in resource.data.admins && groupeValide(request.resource.data)
+        && request.resource.data.createur == resource.data.createur
+        && request.resource.data.abonnes == resource.data.abonnes
+        && request.resource.data.signalements == resource.data.signalements;
+      allow update: if connecte() && seulement(['abonnes']) && request.resource.data.abonnes.diff(resource.data.abonnes).affectedKeys().hasOnly([moi()]);
+      allow update: if connecte() && seulement(['signalements']) && request.resource.data.signalements.diff(resource.data.signalements).affectedKeys().hasOnly([moi()]);
+      allow update: if admin() && seulement(['signalements']);
+      allow delete: if connecte() && (resource.data.createur == moi() || admin());
+    }
+    match /campus/{univ}/posts/{pid} {
+      allow read: if connecte();
+      allow create: if connecte() && postValide(request.resource.data)
+        && (request.resource.data.get('groupe', '') == ''
+            || moi() in get(/databases/$(database)/documents/campus/$(univ)/groupes/$(request.resource.data.groupe)).data.admins);
+      allow update: if connecte() && seulement(['likes']) && request.resource.data.likes.diff(resource.data.likes).affectedKeys().hasOnly([moi()]);
+      allow update: if connecte() && seulement(['signalements']) && request.resource.data.signalements.diff(resource.data.signalements).affectedKeys().hasOnly([moi()]);
+      allow update: if admin() && seulement(['signalements']);
+      allow update: if connecte() && seulement(['nbCom']) && request.resource.data.nbCom == resource.data.nbCom + 1;
+      allow delete: if connecte() && (resource.data.auteur == moi() || admin());
+      match /coms/{cid} {
+        allow read: if connecte();
+        allow create: if connecte() && request.resource.data.auteur == moi()
+          && request.resource.data.keys().hasOnly(['auteur','nom','texte','cree'])
+          && request.resource.data.texte is string && request.resource.data.texte.size() <= 300;
+        allow delete: if connecte() && (resource.data.auteur == moi() || admin());
+        allow delete: if connecte() && get(/databases/$(database)/documents/campus/$(univ)/posts/$(pid)).data.auteur == moi();
+      }
+    }
+    match /{chemin=**}/posts/{pid} {
+      allow read: if admin();
+    }
+    match /{chemin=**}/groupes/{gid} {
+      allow read: if admin();
+    }
+  }
+}
