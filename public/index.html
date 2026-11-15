@@ -224,6 +224,11 @@ nav.bottom .fab:active{transform:translateY(-16px) scale(.94)}
 .mur-txt span{font-size:.82rem;font-weight:700;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mur-go{width:30px;height:30px;flex:none;border-radius:50%;background:rgb(255 255 255/.2);display:grid;place-items:center}
 .mur-go svg{width:18px;height:18px}
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px}
+.cal-grid>div{background:var(--soft);border-radius:16px;padding:10px 12px;display:flex;flex-direction:column}
+.cal-grid b{font-family:var(--f-display);font-size:1.7rem;line-height:1.05}
+.cal-grid span{font-weight:800;color:var(--muted);font-size:.8rem}
+.cal-grid small{font-size:.74rem;font-weight:700;color:var(--muted);margin-top:3px;line-height:1.25}
 .ta{font:inherit;font-weight:600;color:var(--ink);background:var(--soft);border:2px solid var(--line);border-radius:13px;padding:11px 12px;resize:vertical;width:100%}
 
 nav.tabs button[aria-current="page"]{color:var(--c);background:color-mix(in srgb,var(--c) 13%,var(--surface))}
@@ -639,7 +644,7 @@ const TABS=[
   ["prix","Prix","var(--sun)",'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>']
 ];
 // ---------- Scanner un produit (Open Food Facts) ----------
-const OFF_FIELDS="product_name_fr,product_name,brands,quantity,image_front_small_url,nutriscore_grade,nova_group,ecoscore_grade,ingredients_text_fr,ingredients_text,allergens_tags,additives_tags,nutrient_levels,nutriments";
+const OFF_FIELDS="product_name_fr,product_name,brands,quantity,image_front_small_url,nutriscore_grade,nova_group,ecoscore_grade,serving_size,product_quantity,product_quantity_unit,ingredients_text_fr,ingredients_text,allergens_tags,additives_tags,nutrient_levels,nutriments";
 const NUTRI_COL={a:"#038141",b:"#85bb2f",c:"#e8b000",d:"#ee8100",e:"#e63e11"};
 const NOVA_TXT={1:"Aliment pas ou peu transformé",2:"Ingrédient culinaire transformé",3:"Aliment transformé",4:"Aliment ultra-transformé"};
 const NIV={low:["faible","t-mint"],moderate:["modéré","t-sun"],high:["élevé","t-coral"]};
@@ -659,7 +664,7 @@ function scanSheet(){
   const root=a("sheet-root");
   root.innerHTML=`<div class="sheet-bg" id="sb"><div class="sheet" role="dialog" aria-modal="true" aria-label="Scanner un produit">
     <div class="row between"><h2>Scanner un produit</h2><button class="btn ghost sm" id="sx">Fermer</button></div>
-    <span class="small">Vise le code-barres de l'emballage : l'appli affiche la composition, le Nutri-Score et le niveau de transformation.</span>
+    <span class="small">Vise le code-barres de l'emballage : l'appli affiche les calories, la composition, le Nutri-Score et le niveau de transformation.</span>
     <div id="sc-cam" style="position:relative;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:4/3;max-width:100%" hidden><video id="sc-v" playsinline muted style="width:100%;height:100%;object-fit:cover"></video><div style="position:absolute;left:12%;right:12%;top:38%;height:24%;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 999px rgb(0 0 0/.35)"></div></div>
     <button class="btn block" id="sc-go" style="background:var(--mint)">${svg('<path d="M4 7V5h3M17 5h3v2M20 17v2h-3M7 19H4v-2M8 8v8M11 8v8M14 8v8M17 8v8"/>')}Ouvrir la caméra</button>
     <label class="btn ghost block" style="display:flex;justify-content:center;gap:8px;align-items:center">${svg('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>')}Importer une photo du code-barres<input id="sc-img" type="file" accept="image/*" hidden></label>
@@ -709,6 +714,22 @@ function afficherProduit(code,p){
   const all=(p.allergens_tags||[]).map(x=>x.split(":").pop().replace(/-/g," "));
   const add=(p.additives_tags||[]).map(x=>x.split(":").pop().toUpperCase());
   const lv=p.nutrient_levels||{},nu=p.nutriments||{};
+  // calories : pour 100 g / 100 ml, par portion et pour tout le paquet
+  const liquide=/\b\d+([,.]\d+)?\s*(ml|cl|l)\b/i.test(p.quantity||"")||/ml|cl|^l$/i.test(p.product_quantity_unit||"");
+  const u100=liquide?"100 ml":"100 g";
+  const kcal=x=>x==null||x===""||isNaN(+x)?null:Math.round(+x);
+  const k100=kcal(nu["energy-kcal_100g"])??(nu.energy_100g!=null?kcal(nu.energy_100g/4.184):null);
+  const kj100=kcal(nu["energy-kj_100g"])??(nu.energy_100g!=null?kcal(nu.energy_100g):null);
+  const kPort=kcal(nu["energy-kcal_serving"])??(nu.energy_serving!=null?kcal(nu.energy_serving/4.184):null);
+  const qte=+p.product_quantity||0,kTout=k100!=null&&qte>0&&qte<=5000?Math.round(k100*qte/100):null;
+  const calHtml=k100==null&&kPort==null?`<div class="tile t-sky"><span class="lbl" style="color:inherit">Calories</span><span class="small">Non renseignées pour ce produit.</span></div>`
+    :`<div class="card cal" style="box-shadow:none;border:2px solid var(--line);gap:10px">
+      <div class="row between"><h3>Calories</h3>${k100!=null?`<span class="pill ${k100>=400?"t-coral":k100>=200?"t-sun":"t-mint"}">${k100>=400?"Très calorique":k100>=200?"Assez calorique":"Peu calorique"}</span>`:""}</div>
+      <div class="cal-grid">
+        ${k100!=null?`<div><b>${k100}</b><span>kcal</span><small>pour ${u100}${kj100!=null?` · ${kj100} kJ`:""}</small></div>`:""}
+        ${kPort!=null?`<div><b>${kPort}</b><span>kcal</span><small>par portion${p.serving_size?` (${esc(p.serving_size)})`:""}</small></div>`:""}
+        ${kTout!=null?`<div><b>${kTout}</b><span>kcal</span><small>tout le paquet (${esc(String(qte))} ${liquide?"ml":"g"})</small></div>`:""}
+      </div></div>`;
   S.scans=[{code,nom,marque:p.brands||"",nutri:"abcde".includes(n)&&n?n:""},...(S.scans||[]).filter(x=>x.code!==code)].slice(0,20);persist();
   a("sc-out").innerHTML=`<div class="stack" style="gap:12px">
     <div class="row" style="align-items:flex-start">${p.image_front_small_url?`<img src="${esc(p.image_front_small_url)}" alt="" style="width:72px;height:72px;object-fit:contain;border-radius:12px;background:#fff;border:1px solid var(--line)">`:""}
@@ -718,7 +739,8 @@ function afficherProduit(code,p){
       <div class="tile" style="background:${NUTRI_COL[n]||"#e3e8f3"};color:${NUTRI_COL[n]?"#fff":"var(--muted)"}"><span class="lbl" style="color:inherit">Nutri-Score</span><b style="font-size:1.8rem">${"abcde".includes(n)&&n?n.toUpperCase():"?"}</b></div>
       <div class="tile ${nova===4?"t-coral":nova===3?"t-sun":nova?"t-mint":"t-sky"}"><span class="lbl" style="color:inherit">Transformation</span><b style="font-size:1.3rem">${nova?"NOVA "+nova:"?"}</b><span class="small">${NOVA_TXT[nova]||"Inconnue"}</span></div>
     </div>
-    ${Object.keys(NUTR_NOMS).some(k=>lv[k])?`<div class="card" style="box-shadow:none;border:2px solid var(--line);gap:6px"><h3>Pour 100 g</h3>${Object.entries(NUTR_NOMS).filter(([k])=>lv[k]).map(([k,lab])=>{const q=nu[k+"_100g"];return `<div class="row between small"><span>${lab}${q!=null?` · ${String(Math.round(q*10)/10).replace(".",",")} g`:""}</span><span class="pill ${NIV[lv[k]]?.[1]||""}">${NIV[lv[k]]?.[0]||lv[k]}</span></div>`}).join("")}${nu["energy-kcal_100g"]!=null?`<div class="row between small"><span>Énergie</span><b>${Math.round(nu["energy-kcal_100g"])} kcal</b></div>`:""}</div>`:""}
+    ${calHtml}
+    ${Object.keys(NUTR_NOMS).some(k=>lv[k])?`<div class="card" style="box-shadow:none;border:2px solid var(--line);gap:6px"><h3>Pour ${u100}</h3>${Object.entries(NUTR_NOMS).filter(([k])=>lv[k]).map(([k,lab])=>{const q=nu[k+"_100g"];return `<div class="row between small"><span>${lab}${q!=null?` · ${String(Math.round(q*10)/10).replace(".",",")} g`:""}</span><span class="pill ${NIV[lv[k]]?.[1]||""}">${NIV[lv[k]]?.[0]||lv[k]}</span></div>`}).join("")}${nu["energy-kcal_100g"]!=null?`<div class="row between small"><span>Énergie</span><b>${Math.round(nu["energy-kcal_100g"])} kcal</b></div>`:""}</div>`:""}
     ${all.length?`<div class="tile t-coral"><span class="lbl" style="color:inherit">Allergènes</span><span>${esc(all.join(", "))}</span></div>`:""}
     ${add.length?`<div class="small"><b>Additifs (${add.length}) :</b> ${esc(add.join(", "))}</div>`:`<div class="small"><b>Additifs :</b> aucun indiqué</div>`}
     ${ing?`<details><summary>Composition (ingrédients)</summary><p class="small" style="margin:6px 0 0;line-height:1.5">${esc(ing)}</p></details>`:`<span class="small muted">Liste des ingrédients non renseignée.</span>`}
