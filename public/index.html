@@ -2279,6 +2279,18 @@ const lienItin=(dest,mode="walking",orig)=>`https://www.google.com/maps/dir/?api
 const lienPlan=p=>`https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=17/${p.lat}/${p.lon}`;
 const ext=(href,txt,cls="btn ghost sm")=>`<a class="${cls}" href="${esc(href)}" target="_blank" rel="noopener" style="text-decoration:none;text-align:center">${txt}</a>`;
 
+// établissements ajoutés par les étudiants (IUT, écoles, campus absents de la liste officielle)
+let ETAB_COMMU=null;
+async function chargerEtabCommu(){
+  if(ETAB_COMMU)return ETAB_COMMU;
+  try{const f=F(),sn=await f.getDocs(f.collection(f.db,"etablissements"));ETAB_COMMU=sn.docs.map(d=>({id:d.id,...d.data(),type:"Ajouté par les étudiants",sigle:"",url:""})).filter(x=>pointOk(x))}catch(e){ETAB_COMMU=[]}
+  return ETAB_COMMU;
+}
+async function tousEtablissements(){
+  const [c,l]=await Promise.all([chargerEtabCommu(),chargerUnivs().catch(()=>[])]);
+  if(!c.length&&!l.length)throw new Error("Liste des établissements indisponible pour le moment.");
+  return [...c,...l];
+}
 async function chargerUnivs(){
   if(ETU.univs)return ETU.univs;
   try{const c=JSON.parse(localStorage.getItem("pm-univs2")||"null");if(c&&Date.now()-c.t<30*864e5&&c.l?.length){ETU.univs=c.l;return c.l}}catch(e){}
@@ -2301,7 +2313,7 @@ function maPosition(){return new Promise((ok,ko)=>{
 async function chercherAdresse(q){
   for(const u of ["https://data.geopf.fr/geocodage/search?limit=6&q=","https://api-adresse.data.gouv.fr/search/?limit=6&q="]){
     try{const r=await fetch(u+encodeURIComponent(q));if(!r.ok)continue;const j=await r.json();
-      return (j.features||[]).map(f=>({label:f.properties.label,lon:f.geometry.coordinates[0],lat:f.geometry.coordinates[1]}))}catch(e){}
+      return (j.features||[]).map(f=>({label:f.properties.label,ville:f.properties.city||"",lon:f.geometry.coordinates[0],lat:f.geometry.coordinates[1]}))}catch(e){}
   }
   throw new Error("Recherche d'adresse indisponible pour le moment.");
 }
@@ -2465,9 +2477,9 @@ function vEtudes(){
   // branchements
   if(a("eu-chg"))a("eu-chg").onclick=()=>{delete e.univ;persist();vEtudes()};
   if(a("eu-f"))a("eu-f").onsubmit=async ev=>{ev.preventDefault();const q=a("eu-q").value.trim(),res=a("eu-res");if(q.length<2)return;res.innerHTML=charge();
-    try{afficherUnivs(chercherUnivs(await chargerUnivs(),q),null)}catch(x){res.innerHTML=`<div class="note">${esc(x.message)}</div>`}};
+    try{afficherUnivs(chercherUnivs(await tousEtablissements(),q),null)}catch(x){res.innerHTML=`<div class="note">${esc(x.message)}</div>`}};
   if(a("eu-pos"))a("eu-pos").onclick=async()=>{const res=a("eu-res");res.innerHTML=`<span class="small muted">Recherche de ta position…</span>`;
-    try{const [p,l]=await Promise.all([maPosition(),chargerUnivs()]);afficherUnivs(l.map(u=>({...u,d:distKm(p.lat,p.lon,u.lat,u.lon)})).sort((x,y)=>x.d-y.d).slice(0,12),p)}catch(x){res.innerHTML=`<div class="note">${esc(x.message)}</div>`}};
+    try{const [p,l]=await Promise.all([maPosition(),tousEtablissements()]);afficherUnivs(l.map(u=>({...u,d:distKm(p.lat,p.lon,u.lat,u.lon)})).sort((x,y)=>x.d-y.d).slice(0,12),p)}catch(x){res.innerHTML=`<div class="note">${esc(x.message)}</div>`}};
   a("eu-maison").onclick=maisonSheet;
   el.querySelectorAll("[data-euf]").forEach(b=>b.onclick=()=>{F_[b.dataset.euf]=!F_[b.dataset.euf];persist();vEtudes()});
   el.querySelectorAll("[data-euc]").forEach(b=>b.onchange=()=>{e.check=e.check||{};if(b.checked)e.check[b.dataset.euc]=iso(new Date());else delete e.check[b.dataset.euc];persist();vEtudes()});
@@ -2476,10 +2488,41 @@ function vEtudes(){
 }
 function afficherUnivs(l,p){
   const res=a("eu-res");if(!res)return;
-  if(!l.length){res.innerHTML=`<span class="small muted">Aucun établissement trouvé. Essaie avec la ville ou le sigle (ex : « UBO », « Rennes »).</span>`;return}
-  res.innerHTML=l.map((u,i)=>`<button class="item" data-uv="${i}"><span class="ico t-grape">${svg('<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>')}</span><span class="grow">${esc(u.nom)}<span class="sub">${esc([u.ville,u.d!=null?fDist(u.d):""].filter(Boolean).join(" · "))}</span></span></button>`).join("");
+  const ajout=`<button class="btn ghost block" id="eu-add" style="margin-top:6px">Mon école n'est pas dans la liste</button>`;
+  if(!l.length){res.innerHTML=`<span class="small muted">Aucun établissement trouvé. Essaie avec la ville ou le sigle (ex : « UBO », « Rennes »).</span>${ajout}`;a("eu-add").onclick=ajoutEtabSheet;return}
+  res.innerHTML=ajout.replace('style="','style="order:9;')+l.map((u,i)=>`<button class="item" data-uv="${i}"><span class="ico t-grape">${svg('<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>')}</span><span class="grow">${esc(u.nom)}<span class="sub">${esc([u.ville,u.d!=null?fDist(u.d):""].filter(Boolean).join(" · "))}</span></span></button>`).join("");
+  a("eu-add").onclick=ajoutEtabSheet;res.appendChild(a("eu-add"));
   res.querySelectorAll("[data-uv]").forEach(b=>b.onclick=()=>{const u=l[+b.dataset.uv];etu().univ={id:u.id,nom:u.nom,sigle:u.sigle,type:u.type,ville:u.ville,url:u.url,lat:u.lat,lon:u.lon};
     persist();toast(u.nom+" enregistré");vEtudes()});
+}
+function ajoutEtabSheet(){
+  const root=a("sheet-root");let lieu=null;
+  root.innerHTML=`<div class="sheet-bg" id="sb"><form class="sheet" id="ae" role="dialog" aria-modal="true" aria-label="Ajouter mon établissement">
+    <div class="row between"><h2>Ajouter mon école</h2><button type="button" class="btn ghost sm" id="sx">Fermer</button></div>
+    <span class="small muted">IUT, école, campus… S'il n'est pas dans la liste officielle, ajoute-le : les autres étudiants le trouveront ensuite, et vous partagerez le même mur.</span>
+    <label class="f">Nom complet<input id="ae-n" maxlength="80" placeholder="Ex : IUT A de Lille" autocomplete="off"></label>
+    <span class="lbl">Adresse du campus</span>
+    <div class="small" id="ae-lieu">Pas encore choisie</div>
+    <div class="row" style="gap:8px"><input id="ae-q" class="grow" placeholder="Ex : Cité scientifique, Villeneuve-d'Ascq"><button type="button" class="btn sm" id="ae-ch">Chercher</button></div>
+    <div id="ae-res" class="list"></div>
+    <div class="err" id="ae-err"></div>
+    <button class="btn block" style="background:var(--grape)">Ajouter et choisir</button>
+  </form></div>`;
+  a("sx").onclick=()=>root.innerHTML="";a("sb").onclick=e=>{if(e.target.id==="sb")root.innerHTML=""};
+  a("ae-ch").onclick=async()=>{const q=a("ae-q").value.trim(),res=a("ae-res");if(q.length<3)return;res.innerHTML=`<span class="small muted">Recherche…</span>`;
+    try{const l=await chercherAdresse(q);res.innerHTML=l.map((x,i)=>`<button type="button" class="item" data-al="${i}"><span class="grow">${esc(x.label)}</span></button>`).join("")||`<span class="small muted">Adresse introuvable.</span>`;
+      res.querySelectorAll("[data-al]").forEach(b=>b.onclick=()=>{lieu=l[+b.dataset.al];a("ae-lieu").textContent=lieu.label;res.innerHTML=""})}catch(e){res.innerHTML=`<div class="note">${esc(e.message)}</div>`}};
+  a("ae").onsubmit=async e=>{e.preventDefault();const nom=a("ae-n").value.trim().replace(/\s+/g," "),err=a("ae-err");
+    if(nom.length<3){err.textContent="Écris le nom de ton école.";return}
+    if(!lieu){err.textContent="Cherche et choisis l'adresse du campus.";return}
+    const ville=lieu.ville||String(lieu.label).split(" ").slice(-1)[0]||"";
+    const id=("e-"+norm(nom+" "+ville).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")).slice(0,90);
+    const data={nom:nom.slice(0,80),ville:ville.slice(0,60),adresse:String(lieu.label).slice(0,160),lat:+(+lieu.lat).toFixed(5),lon:+(+lieu.lon).toFixed(5),auteur:moi(),cree:new Date().toISOString()};
+    try{const f=F(),ref=f.doc(f.db,"etablissements",id),ex=await f.getDoc(ref);
+      const u=ex.exists()?{id,...ex.data()}:(await f.setDoc(ref,data),{id,...data});
+      ETAB_COMMU=null;etu().univ={id,nom:u.nom,sigle:"",type:"Ajouté par les étudiants",ville:u.ville,url:"",lat:u.lat,lon:u.lon};
+      persist();root.innerHTML="";toast(ex.exists()?u.nom+" existait déjà : il est choisi":u.nom+" ajouté et choisi");vEtudes()}
+    catch(x){err.textContent="Ajout impossible : "+errFr(x)}};
 }
 function maisonSheet(){
   const root=a("sheet-root"),e=etu();
