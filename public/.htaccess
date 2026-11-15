@@ -1,0 +1,14 @@
+# P'tite Éco — réglages pour l'hébergement OVH
+RewriteEngine On
+# toujours en HTTPS (obligatoire pour l'installation sur téléphone, la caméra et la position)
+RewriteCond %{SERVER_PORT} 80
+RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+AddType application/manifest+json .webmanifest
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "camera=(self), geolocation=(self), microphone=()"
+  <Files "sw.js">
+    Header set Cache-Control "no-cache"
+  </Files>
+</IfModule>
