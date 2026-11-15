@@ -17,6 +17,8 @@ jobs:
         run: echo "$CLE" > "$RUNNER_TEMP/cle.json"
         env:
           CLE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Compte utilisé
+        run: python3 -c "import json,os;d=json.load(open(os.environ['RUNNER_TEMP']+'/cle.json'));print('Compte :',d.get('client_email'),'| Projet :',d.get('project_id'))"
       - name: Publier les règles Firestore
         run: npx --yes firebase-tools@13 deploy --only firestore:rules --project mon-porte-monnaie-e3f0a --non-interactive
         env:
