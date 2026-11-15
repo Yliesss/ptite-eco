@@ -479,6 +479,9 @@ function exporter(){
 // ================= Déverrouillage biométrique =================
 const b64=buf=>btoa(String.fromCharCode(...new Uint8Array(buf)));
 const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+// L'empreinte est liée à l'appareil ET à l'adresse du site : on la garde sur cet appareil, pour ce site.
+const cleBio=()=>"pm-bio-"+(fbUser?.uid||"")+"-"+location.hostname;
+function bioId(){try{return localStorage.getItem(cleBio())||""}catch(e){return ""}}
 async function bioDispo(){try{return !!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())}catch(e){return false}}
 async function activerBio(){
   try{
@@ -486,12 +489,14 @@ async function activerBio(){
       user:{id:crypto.getRandomValues(new Uint8Array(16)),name:profil.prenom,displayName:profil.prenom},
       pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
       authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"discouraged"},timeout:60000}});
-    profil.bio=b64(cred.rawId);persist();toast("Empreinte / visage activé");return true;
+    try{localStorage.setItem(cleBio(),b64(cred.rawId))}catch(e){}
+    if(profil.bio){delete profil.bio;persist()}
+    toast("Empreinte / visage activé sur cet appareil");return true;
   }catch(e){toast(e?.name==="NotAllowedError"?"Activation annulée":"Ton téléphone ne permet pas l'empreinte dans cette appli");return false}
 }
 async function deverrouillerBio(){
   try{
-    await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:"public-key",id:unb64(profil.bio)}],userVerification:"required",timeout:60000}});
+    await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:"public-key",id:unb64(bioId()),transports:["internal"]}],userVerification:"required",timeout:60000}});
     return true;
   }catch(e){return false}
 }
@@ -1548,7 +1553,7 @@ function compteSheet(){
   root.innerHTML=`<div class="sheet-bg" id="sb"><div class="sheet" role="dialog" aria-modal="true" aria-label="Mon compte">
     <div class="row"><span class="avatar" style="width:52px;height:52px;font-size:1.4rem">${esc(profil.prenom[0]?.toUpperCase())}</span><div class="grow"><h2>${esc(profil.prenom)}</h2><span class="sub">${esc(fbUser.email)}</span><span class="sub">Compte créé le ${fdate(new Date(profil.cree+"T00:00:00"))}</span></div><button class="btn ghost sm" id="sx">Fermer</button></div>
     <span class="note">Tes données sont dans ta base privée, en Europe. Personne d'autre ne peut les voir.</span>
-    <button class="btn mint block" id="c-bio" hidden>${profil.bio?"Désactiver l'empreinte / le visage":"Déverrouiller avec l'empreinte ou le visage"}</button>
+    <button class="btn mint block" id="c-bio" hidden>${bioId()?"Désactiver l'empreinte / le visage":"Déverrouiller avec l'empreinte ou le visage"}</button>
     <button class="btn ghost block" data-act="prenom">Modifier mon prénom</button>
     <button class="btn ghost block" data-act="statut">Ma situation : ${NOM_STATUT[profil.statut]||"à indiquer"}</button>
     ${estGoogle()?`<span class="note">Connecté avec Google : ton mot de passe se gère dans ton compte Google.</span>`:`<button class="btn ghost block" id="c-pwd">Changer le mot de passe</button>`}
@@ -1568,7 +1573,7 @@ function compteSheet(){
   a("c-exp").onclick=exporter;
   a("c-tuto").onclick=()=>{a("sheet-root").innerHTML="";tutoriel()};
   a("c-notif").onclick=async()=>{if(S.notifs){S.notifs=false;persist();close();toast("Notifications désactivées")}else if(await activerNotifs())close()};
-  (async()=>{const b=a("c-bio");if(!b)return;if(profil.bio||await bioDispo()){b.hidden=false;b.onclick=async()=>{if(profil.bio){delete profil.bio;persist();close();toast("Empreinte / visage désactivé")}else if(await activerBio())close()}}})();
+  (async()=>{const b=a("c-bio");if(!b)return;if(bioId()||await bioDispo()){b.hidden=false;b.onclick=async()=>{if(bioId()){try{localStorage.removeItem(cleBio())}catch(e){}if(profil.bio){delete profil.bio;persist()}close();toast("Empreinte / visage désactivé")}else if(await activerBio())close()}}})();
   a("c-del").onclick=e=>{const b=e.currentTarget;if(!b.dataset.ok){b.dataset.ok=1;b.textContent="Confirmer : tout sera effacé définitivement";return}
     demanderMdp("Supprimer mon compte","Supprimer définitivement",async()=>{
       clearTimeout(saveTimer);await fb().deleteDoc(fb().doc(fb().db,"users",fbUser.uid));await fb().deleteDoc(fb().doc(fb().db,"profils",fbUser.uid)).catch(()=>{});await fb().deleteUser(fbUser);
@@ -3088,7 +3093,9 @@ function demarrer(){
     if(data?.profil){profil=data.profil;try{S={...VIDE(),...JSON.parse(data.state||"{}")};migrer()}catch(e){S=VIDE()}}
     else if(!nouveauProfil&&estGoogle()){screenBienvenueGoogle(user);return}
     else{profil=nouveauProfil||{prenom:(user.email||"?").split("@")[0],cree:iso(new Date()),rgpd:new Date().toISOString()};profil.nouveau=true;S=VIDE();nouveauProfil=null;if(profil.statut==="etudiant")tab="etudes";setUnlocked(true);persist()}
-    if(profil.bio&&!isUnlocked())screenLock();else{setUnlocked(true);startApp()}
+    // ancienne empreinte (enregistrée sur l'ancien site) : plus utilisable ici, on propose de la réactiver
+    if(profil.bio&&!bioId()){delete profil.bio;persist();setTimeout(()=>toast("Réactive l'empreinte dans Mon compte : elle était liée à l'ancienne adresse du site"),2500)}
+    if(bioId()&&!isUnlocked())screenLock();else{setUnlocked(true);startApp()}
     demarrerTempsReel();
     setTimeout(notifier,1500);
   });
