@@ -1,5 +1,5 @@
 // Permet d'installer l'appli et de l'ouvrir même avec une connexion faible.
-const CACHE = "ptite-eco-v32";
+const CACHE = "ptite-eco-v33";
 const FICHIERS = ["./", "index.html", "firebase-config.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FICHIERS))); self.skipWaiting(); });
 self.addEventListener("activate", e => {

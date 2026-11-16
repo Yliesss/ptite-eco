@@ -110,6 +110,31 @@ nav.tabs.n8 button{flex:0 0 64px;font-size:.62rem;padding:8px 0}
 .choix-st:focus-within{outline:3px solid var(--sky);outline-offset:2px}
 .pt{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 .leaflet-container{font:inherit}
+/* ================= Guide d'installation ================= */
+.install-bandeau{display:flex;align-items:center;gap:12px;padding:14px;border-radius:20px;background:linear-gradient(135deg,#7b4dff,#5f33c2);color:#fff;box-shadow:0 10px 24px rgb(95 51 194/.28)}
+.install-bandeau .small{color:rgb(255 255 255/.85)}
+.install-ico{width:42px;height:42px;flex:none;border-radius:13px;background:rgb(255 255 255/.18);display:grid;place-items:center}
+.install-ico svg{width:24px;height:24px}
+.ig-ecran{position:relative;height:250px;border-radius:26px;border:7px solid #1d2547;background:#f3f4f8;overflow:hidden;max-width:300px;width:100%;margin:0 auto;box-shadow:0 12px 30px rgb(29 37 71/.18)}
+.ig-anim{position:absolute;inset:0;display:flex;flex-direction:column;animation:ig-in .45s ease}
+@keyframes ig-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.ig-barre{display:flex;align-items:center;gap:8px;padding:9px 10px;background:#fff;border-bottom:1px solid #e3e5ee;color:#1d2547;font-size:.82rem;flex:none}
+.ig-barre.bas{border-bottom:0;border-top:1px solid #e3e5ee;justify-content:space-around;font-size:1.05rem;margin-top:auto}
+.ig-url{flex:1;min-width:0;background:#eef0f6;border-radius:99px;padding:6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ig-btn{position:relative;display:grid;place-items:center;min-width:28px;height:28px;border-radius:8px;font-weight:900}
+.ig-btn svg{width:20px;height:20px}
+.ig-page{flex:1;margin:10px;border-radius:14px;background:repeating-linear-gradient(#e6e8f1 0 12px,transparent 12px 24px) 14px 52px/60% 100% no-repeat,linear-gradient(135deg,#ff8a5c,#ff5f7e) 14px 14px/45% 26px no-repeat,#fff}
+.ig-menu{position:absolute;top:44px;right:8px;width:76%;background:#fff;border-radius:12px;box-shadow:0 10px 26px rgb(29 37 71/.22);display:flex;flex-direction:column;padding:4px 0;color:#1d2547;font-size:.8rem;z-index:2}
+.ig-menu.bas{top:auto;bottom:8px;left:8px;right:8px;width:auto}
+.ig-menu>span{position:relative;padding:8px 12px;display:flex;align-items:center;gap:6px}
+.ig-menu svg{width:16px;height:16px}
+.ig-dialogue{position:absolute;left:10px;right:10px;bottom:10px;background:#fff;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;color:#1d2547;font-size:.82rem;box-shadow:0 10px 26px rgb(29 37 71/.25);z-index:2}
+.ig-lien{color:#1a73e8;font-weight:800}
+.ig-cible{position:relative;border-radius:8px;animation:ig-pulse 1.6s ease-in-out infinite}
+@keyframes ig-pulse{0%,100%{box-shadow:0 0 0 0 rgb(255 95 126/.0),inset 0 0 0 2px #ff5f7e}50%{box-shadow:0 0 0 6px rgb(255 95 126/.25),inset 0 0 0 2px #ff5f7e}}
+.ig-doigt{position:absolute;right:-6px;bottom:-22px;width:30px;height:30px;pointer-events:none;animation:co-tap 1.6s ease-in-out infinite;filter:drop-shadow(0 3px 4px rgb(0 0 0/.25));z-index:3}
+.ig-doigt svg{width:30px;height:30px}
+
 /* ================= Ordinateur : menu à gauche, contenu sur deux colonnes ================= */
 aside.side{display:none}
 @media (hover:hover){.item:hover,.tuile:hover{filter:brightness(.97)}.btn:hover{filter:brightness(1.06)}}
@@ -1132,7 +1157,7 @@ function vAccueil(){
   const vide=!S.revenus.length;
   const proch=S.abos.map(x=>({x,d:prochain(x)})).filter(o=>o.d).sort((p,q)=>p.d-q.d).slice(0,3);
   const nonVerif=fbUser&&!fbUser.emailVerified;
-  el.innerHTML=`${annonceHtml()}
+  el.innerHTML=`${annonceHtml()}${bandeauInstallHtml()}
   ${nonVerif?`<div class="tile t-sun"><b style="font-size:1rem">Confirme ton adresse e-mail</b><span class="small">On t'a envoyé un lien à ${esc(fbUser.email)}. Pense à regarder dans les spams.</span><div class="row"><button class="btn sm" style="background:var(--sun);color:#5b3a00" data-act="verif-renvoyer">Renvoyer l'e-mail</button><button class="btn ghost sm" data-act="verif-ok">C'est fait</button></div></div>`:""}
   <div class="hero">
     ${donut(parts,total)}
@@ -1162,7 +1187,7 @@ function vAccueil(){
   <button class="tile t-coral" style="border:0;text-align:left;font:inherit;cursor:pointer" data-act="budget-courses">
     <span class="lbl" style="color:inherit">Budget courses par mois</span><b>${eur(t.budget)}</b><span class="small">${t.budget?`Encore ${eur(t.courses)} à dépenser ce mois · touche pour modifier`:"Touche pour le définir"}</span></button>
   ${proch.length?`<div class="card"><h3>Prochains prélèvements</h3><div class="list">${proch.map(o=>{const c=catOf(o.x),j=joursAvant(o.d);return `<div class="item" style="cursor:default"><span class="ico t-${c.c}">${svg(c.i)}</span><span class="grow">${esc(o.x.nom)}<span class="sub">${j===0?"Aujourd'hui":j===1?"Demain":"Le "+fdate(o.d,{day:"numeric",month:"long"})}</span></span><span class="amt">${eur(o.x.montant)}</span></div>`}).join("")}</div></div>`:""}`;
-  brancherAnnonce();
+  brancherAnnonce();brancherBandeauInstall();
 }
 
 // ---------- Abonnements ----------
@@ -1583,7 +1608,7 @@ const F_PROD=c=>[{k:"nom",label:"Produit",req:true},{k:"fmt",label:"Format",ph:"
 const valProd=c=>{const v={nom:c.nom,fmt:c.fmt};favs().forEach(m=>{if(c.prix?.[m]>0)v["p_"+m]=c.prix[m]});return v};
 const saveProd=(c,v)=>{c.nom=v.nom;c.fmt=v.fmt;c.prix=c.prix||{};c.prixDate=c.prixDate||{};favs().forEach(m=>{const x=v["p_"+m];if(x>0){if(c.prix[m]!==x)c.prixDate[m]=iso(new Date());c.prix[m]=x}else{delete c.prix[m];delete c.prixDate[m]}})};
 document.addEventListener("click",e=>{
-  const b=e.target.closest("[data-act],[data-tab]");if(!b)return;if(b.dataset.act==="vie-privee"){privacySheet();return}if(!profil||!fbUser)return;
+  const b=e.target.closest("[data-act],[data-tab]");if(!b)return;if(b.dataset.act==="vie-privee"){privacySheet();return}if(b.dataset.act==="installer"){installSheet();return}if(!profil||!fbUser)return;
   if(b.dataset.tab){a("sheet-root").innerHTML="";show(b.dataset.tab);return}
   const id=b.dataset.id,act=b.dataset.act,find=(arr)=>arr.find(x=>x.id===id);
   switch(act){
@@ -1667,6 +1692,7 @@ function compteSheet(){
     <button class="btn ghost block" id="c-notif">${S.notifs?"Désactiver les notifications":"Activer les notifications"}</button>
     <button class="btn ghost block" data-act="notifs-tel">${S.notifTel?"Désactiver les notifications du téléphone":"Activer les notifications du téléphone"}</button>
     <button class="btn ghost block" data-act="inviter">Inviter des amis</button>
+    ${estInstalle()?"":`<button class="btn ghost block" data-act="installer">Installer l'appli sur mon téléphone</button>`}
     <button class="btn ghost block" data-act="badges">Mes badges</button>
     <button class="btn ghost block" data-act="theme">Apparence : clair ou sombre</button>
     <button class="btn ghost block" data-act="pro-reglage">${S.modePro?"Suivi pro : "+esc(nomPro()):"Séparer l'argent pro et perso"}</button>
@@ -1762,6 +1788,7 @@ const amis=()=>SOC.amities.filter(x=>x.statut==="ok").map(x=>{const o=x.membres.
 // bilan partageable, badges et défis
 // =====================================================================
 const NOUVEAUTES_APP=[
+  {id:"app-9",date:"2026-11-16",titre:"Installe l'appli en 3 gestes",texte:"Un guide animé montre où toucher pour mettre P'tite Éco sur ton écran d'accueil, que tu sois sur Android, Samsung, iPhone ou ordinateur."},
   {id:"app-8",date:"2026-11-16",titre:"Cloche, messages, badges et parrainage",texte:"La cloche en haut regroupe tes rappels, l'activité (commentaires, foyer, amis) et les nouveautés. Envoie un message privé à un vendeur du mur, gagne des badges, relève les défis du mois, invite tes amis et partage ton bilan en story."},
   {id:"app-7",date:"2026-11-16",titre:"Prix par code-barres",texte:"Scanne un produit et donne le prix que tu l'as payé : tout le monde en profite. Tu peux aussi suivre un produit pour être prévenu quand quelqu'un trouve moins cher."},
   {id:"app-6",date:"2026-11-15",titre:"Calories des produits",texte:"Le scan affiche les calories pour 100 g, par portion et pour tout le paquet."},
@@ -2285,6 +2312,7 @@ function menuSheet2(){
    `<div class="list">
       <button class="item" data-act="compte"><span class="ico t-sun" style="width:38px;height:38px">${esc(profil.prenom[0]?.toUpperCase()||"?")}</span><span class="grow"><b>Mon compte</b><span class="sub">Réglages, apparence, ma situation</span></span></button>
       <button class="item" data-act="inviter"><span class="ico t-sun" style="width:38px;height:38px">${svg('<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M17 8v6M14 11h6"/>')}</span><span class="grow"><b>Inviter des amis</b><span class="sub">Partage ton lien de parrainage</span></span></button>
+      ${estInstalle()?"":`<button class="item" data-act="installer"><span class="ico t-coral" style="width:38px;height:38px">${svg('<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M12 7v7M9 11l3 3 3-3"/>')}</span><span class="grow"><b>Installer l'appli</b><span class="sub">Une icône sur ton écran d'accueil</span></span></button>`}
       <button class="item" data-act="badges"><span class="ico t-grape" style="width:38px;height:38px">★</span><span class="grow"><b>Mes badges et défis</b><span class="sub">Ta progression</span></span></button>
       <button class="item" data-act="guide"><span class="ico t-mint" style="width:38px;height:38px">${svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/>')}</span><span class="grow"><b>Revoir le tutoriel</b><span class="sub">Je te remontre où cliquer</span></span></button>
       ${ADM.ok?`<button class="item" data-tab="admin"><span class="ico" style="width:38px;height:38px;background:var(--hero);color:#fff">${svg('<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>')}</span><span class="grow"><b>Administration</b><span class="sub">Statistiques et modération</span></span></button>`:""}
@@ -2293,6 +2321,76 @@ function menuSheet2(){
 
 // ================= Tutoriel guidé (ça montre où toucher) =================
 const POINTEUR='<svg viewBox="0 0 24 24" fill="#fff" stroke="#1d2547" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M10 9.5V4a2 2 0 0 0-4 0v10l-1.2-1.2a2 2 0 0 0-2.8 2.8l3.6 3.6C7.1 20.7 8.8 22 12 22h2a8 8 0 0 0 8-8v-3a2 2 0 0 0-4 0v-1a2 2 0 0 0-4 0v-.5a2 2 0 0 0-4 0z"/></svg>';
+
+// ================= Installer l'appli sur l'écran d'accueil (guide animé) =================
+let INSTALL_PROMPT=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();INSTALL_PROMPT=e;document.querySelectorAll("[data-install-natif]").forEach(b=>b.hidden=false)});
+addEventListener("appinstalled",()=>{INSTALL_PROMPT=null;toast("P'tite Éco est installée sur ton écran d'accueil !");try{localStorage.setItem("pm-installe","1")}catch(e){}if(tab==="accueil"&&a("v-accueil"))render()});
+const estInstalle=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true||(()=>{try{return localStorage.getItem("pm-installe")==="1"&&matchMedia("(display-mode: standalone)").matches}catch(e){return false}})();
+function plateforme(){const u=navigator.userAgent;
+  if(/iPhone|iPad|iPod/.test(u)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))return "iphone";
+  if(/SamsungBrowser/.test(u))return "samsung";
+  if(/Android/.test(u))return "android";
+  return "ordi";}
+const bandeauInstallVisible=()=>{if(estInstalle())return false;try{const f=localStorage.getItem("pm-install-ferme");return !f||Date.now()-+f>7*864e5}catch(e){return true}};
+function bandeauInstallHtml(){
+  if(!bandeauInstallVisible())return "";
+  return `<div class="install-bandeau"><span class="install-ico">${svg('<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M12 7v7M9 11l3 3 3-3M10 18h4"/>')}</span>
+    <div class="grow" style="min-width:0"><b>Installe l'appli sur ton ${plateforme()==="ordi"?"ordinateur":"téléphone"}</b><span class="small" style="display:block">Une icône comme une vraie appli, en 3 gestes.</span></div>
+    <button class="btn sm" data-act="installer" style="background:#fff;color:#5f33c2;flex:none">Voir</button><button class="btn sm" id="ib-x" aria-label="Masquer" style="background:rgb(255 255 255/.18);flex:none">×</button></div>`;
+}
+function brancherBandeauInstall(){if(a("ib-x"))a("ib-x").onclick=()=>{try{localStorage.setItem("pm-install-ferme",String(Date.now()))}catch(e){}render()}}
+
+// maquettes animées : on dessine l'écran du navigateur et on montre où toucher
+const ICN_PARTAGE='<path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11v9h12v-9"/>';
+const ICN_PLUS_CARRE='<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/>';
+const doigt=`<span class="ig-doigt">${POINTEUR}</span>`;
+const GUIDES={
+  android:{nom:"Android (Chrome)",etapes:[
+    {t:"Touche les 3 petits points",d:"En haut à droite de Chrome.",m:`<div class="ig-barre"><span class="ig-url">🔒 ptiteeco.fr</span><span class="ig-btn ig-cible">⋮${doigt}</span></div><div class="ig-page"></div>`},
+    {t:"« Ajouter à l'écran d'accueil »",d:"Parfois écrit « Installer l'application ».",m:`<div class="ig-barre"><span class="ig-url">🔒 ptiteeco.fr</span><span class="ig-btn">⋮</span></div><div class="ig-menu"><span>Nouvel onglet</span><span>Favoris</span><span>Historique</span><span class="ig-cible">⊕ Ajouter à l'écran d'accueil${doigt}</span><span>Paramètres</span></div>`},
+    {t:"Touche « Installer »",d:"L'icône P'tite Éco apparaît sur ton écran d'accueil.",m:`<div class="ig-page"></div><div class="ig-dialogue"><b>Installer l'application ?</b><div class="row" style="gap:8px;align-items:center">${MARK.replace("<svg ",'<svg style="width:34px;height:34px;border-radius:9px" ')}<span>P'tite Éco<br><small>ptiteeco.fr</small></span></div><div class="row" style="justify-content:flex-end;gap:14px"><span>Annuler</span><span class="ig-cible ig-lien">Installer${doigt}</span></div></div>`}
+  ]},
+  samsung:{nom:"Samsung Internet",etapes:[
+    {t:"Touche le menu ≡",d:"En bas à droite de l'écran.",m:`<div class="ig-page"></div><div class="ig-barre bas"><span>‹</span><span>›</span><span>⌂</span><span>▢</span><span class="ig-btn ig-cible">≡${doigt}</span></div>`},
+    {t:"« Ajouter la page à »",d:"Dans la liste qui s'ouvre.",m:`<div class="ig-page"></div><div class="ig-menu bas"><span>Favoris</span><span class="ig-cible">⊕ Ajouter la page à${doigt}</span><span>Téléchargements</span><span>Paramètres</span></div>`},
+    {t:"Choisis « Écran d'accueil »",d:"Puis valide avec « Ajouter ».",m:`<div class="ig-page"></div><div class="ig-menu bas"><span>Favoris</span><span class="ig-cible">⌂ Écran d'accueil${doigt}</span><span>Accès rapide</span></div>`}
+  ]},
+  iphone:{nom:"iPhone (Safari)",etapes:[
+    {t:"Touche le bouton Partager",d:"Le carré avec une flèche vers le haut, en bas de Safari.",m:`<div class="ig-page"></div><div class="ig-barre bas"><span>‹</span><span>›</span><span class="ig-btn ig-cible">${svg(ICN_PARTAGE)}${doigt}</span><span>▭</span><span>⧉</span></div>`},
+    {t:"« Sur l'écran d'accueil »",d:"Fais défiler la liste vers le bas si besoin.",m:`<div class="ig-page"></div><div class="ig-menu bas"><span>Copier</span><span>Ajouter aux favoris</span><span class="ig-cible">Sur l'écran d'accueil ${svg(ICN_PLUS_CARRE)}${doigt}</span><span>Imprimer</span></div>`},
+    {t:"Touche « Ajouter »",d:"En haut à droite. C'est installé !",m:`<div class="ig-barre"><span>Annuler</span><b>Écran d'accueil</b><span class="ig-cible ig-lien">Ajouter${doigt}</span></div><div class="ig-dialogue" style="position:static;margin:14px"><div class="row" style="gap:8px;align-items:center">${MARK.replace("<svg ",'<svg style="width:40px;height:40px;border-radius:10px" ')}<span>P'tite Éco</span></div></div>`}
+  ]},
+  ordi:{nom:"Ordinateur (Chrome, Edge)",etapes:[
+    {t:"Clique sur l'icône d'installation",d:"À droite de la barre d'adresse (un écran avec une flèche).",m:`<div class="ig-barre"><span class="ig-url">🔒 ptiteeco.fr</span><span class="ig-btn ig-cible">${svg('<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 8v5M9.5 10.5L12 13l2.5-2.5M8 20h8"/>')}${doigt}</span><span class="ig-btn">⋮</span></div><div class="ig-page"></div>`},
+    {t:"Clique sur « Installer »",d:"P'tite Éco s'ouvre dans sa propre fenêtre, comme un logiciel.",m:`<div class="ig-page"></div><div class="ig-dialogue"><b>Installer l'application ?</b><div class="row" style="gap:8px;align-items:center">${MARK.replace("<svg ",'<svg style="width:34px;height:34px;border-radius:9px" ')}<span>P'tite Éco</span></div><div class="row" style="justify-content:flex-end;gap:14px"><span class="ig-cible ig-lien">Installer${doigt}</span><span>Annuler</span></div></div>`}
+  ]}
+};
+function installSheet(pf){
+  pf=pf||plateforme();const G=GUIDES[pf],root=a("sheet-root");let i=0,minuteur=null;
+  if(estInstalle()){toast("L'appli est déjà installée sur cet appareil");return}
+  const dessiner=()=>{
+    const e=G.etapes[i];
+    root.innerHTML=`<div class="sheet-bg" id="sb"><div class="sheet" id="ig-sheet" role="dialog" aria-modal="true" aria-label="Installer l'appli">
+      <div class="row between"><h2>Installer l'appli</h2><button class="btn ghost sm" id="sx">Fermer</button></div>
+      <button class="btn coral block" data-install-natif ${INSTALL_PROMPT?"":"hidden"}>Installer maintenant</button>
+      <div class="chips-scroll">${Object.entries(GUIDES).map(([k,g])=>`<button class="btn sm ${k===pf?"":"ghost"}" data-pf="${k}" style="${k===pf?"background:var(--grape)":""}">${esc(g.nom)}</button>`).join("")}</div>
+      <div class="ig-ecran" aria-hidden="true"><div class="ig-anim" key="${i}">${e.m}</div></div>
+      <div class="stack" style="gap:2px;text-align:center"><span class="lbl">Étape ${i+1} sur ${G.etapes.length}</span><h3>${esc(e.t)}</h3><span class="small muted">${esc(e.d)}</span></div>
+      <div class="row between"><button class="btn ghost sm" id="ig-p" ${i?"":"disabled"}>Retour</button>
+        <div class="row" style="gap:5px">${G.etapes.map((_,k)=>`<span style="width:${k===i?18:6}px;height:6px;border-radius:3px;background:${k===i?"var(--coral)":"var(--line)"};transition:width .3s"></span>`).join("")}</div>
+        <button class="btn sm" id="ig-n" style="background:var(--coral)">${i<G.etapes.length-1?"Suivant":"Revoir"}</button></div>
+      <span class="sub" style="text-align:center">Pas de Play Store ni d'App Store : l'appli s'installe directement depuis le navigateur, gratuitement.</span>
+    </div></div>`;
+    const close=()=>{clearInterval(minuteur);root.innerHTML=""};a("sx").onclick=close;a("sb").onclick=x=>{if(x.target.id==="sb")close()};
+    root.querySelectorAll("[data-pf]").forEach(b=>b.onclick=()=>{clearInterval(minuteur);installSheet(b.dataset.pf)});
+    a("ig-n").onclick=()=>{i=(i+1)%G.etapes.length;relancer();dessiner()};a("ig-p").onclick=()=>{if(i){i--;relancer();dessiner()}};
+    const nat=root.querySelector("[data-install-natif]");if(nat)nat.onclick=async()=>{if(!INSTALL_PROMPT)return;INSTALL_PROMPT.prompt();const r=await INSTALL_PROMPT.userChoice.catch(()=>null);INSTALL_PROMPT=null;if(r?.outcome==="accepted")close()};
+  };
+  // les étapes défilent toutes seules
+  const relancer=()=>{clearInterval(minuteur);minuteur=setInterval(()=>{if(!a("ig-sheet")){clearInterval(minuteur);return}i=(i+1)%G.etapes.length;dessiner()},3800)};
+  relancer();dessiner();
+}
 function etapesGuide(){return [
   {t:"Bienvenue sur P'tite Éco !",p:"Je te montre l'essentiel en 30 secondes. Suis le doigt."},
   {sel:".hero",tab:"accueil",t:"Ton reste à vivre",p:"Le chiffre le plus important : ce qu'il te reste pour finir le mois. Il se calcule tout seul."},
@@ -3238,7 +3336,7 @@ function screenPresentation(){
     <div><h1 style="font-size:2.4rem;line-height:1.05">Petites économies,<br>grande liberté.</h1>
       <p class="muted" style="margin:12px 0 0;font-size:1.05rem">Budget, abonnements, courses, dépenses du foyer et un espace étudiant, dans une seule appli gratuite pensée pour le téléphone.</p></div>
     <div class="hero" style="padding:16px"><div class="grow" style="display:flex;flex-direction:column;gap:2px"><span class="lbl">Reste à vivre ce mois</span><span class="big" style="color:#5ff0c8">412,50 €</span><span class="small" style="color:#b9c1e6">Exemple · 1 450 € reçus en novembre</span></div></div>
-    <div class="stack" style="gap:10px"><button class="btn coral block" id="pr-new" style="padding:15px;font-size:1.05rem">Créer mon compte gratuit</button><button class="btn ghost block" id="pr-log">J'ai déjà un compte</button></div>
+    <div class="stack" style="gap:10px"><button class="btn coral block" id="pr-new" style="padding:15px;font-size:1.05rem">Créer mon compte gratuit</button><button class="btn ghost block" id="pr-log">J'ai déjà un compte</button>${estInstalle()?"":`<button class="btn ghost block" type="button" data-act="installer">📲 Installer l'appli sur mon téléphone</button>`}</div>
     <div class="grid2">${F6.map(f=>`<div class="card" style="gap:6px;padding:14px"><span class="ico t-${f[0]}" style="width:38px;height:38px">${svg(f[3])}</span><b>${f[1]}</b><span class="small muted" style="font-weight:600">${f[2]}</span></div>`).join("")}</div>
     ${(()=>{try{return localStorage.getItem("pm-parrain")}catch(e){return ""}})()?`<div class="tile t-sun"><b style="font-size:1rem">Un ami t'invite sur P'tite Éco</b><span class="small">Inscris-toi : vous serez automatiquement amis dans l'appli.</span></div>`:""}
     <div class="tile t-mint"><b style="font-size:1rem">Tes données restent privées</b><span class="small">Stockées en Europe, sans publicité ni revente. Tu peux les télécharger ou tout supprimer quand tu veux.</span></div>
