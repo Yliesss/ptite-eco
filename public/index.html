@@ -299,6 +299,57 @@ details summary{cursor:pointer;font-weight:800;font-size:.88rem;color:var(--link
 .err{color:var(--neg);font-size:.86rem;font-weight:700}
 .coin{font-family:var(--f-display);font-size:2.2rem;font-weight:700;line-height:1.05}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(40px);opacity:.6}}.donut circle{transition:stroke-dasharray .5s}}
+/* ================= Liquid glass ================= */
+:root{
+  --verre:rgb(255 255 255/.52); --verre-fort:rgb(255 255 255/.78); --verre-bord:rgb(255 255 255/.75); --verre-ombre:rgb(40 50 110/.12);
+  --reflet:linear-gradient(140deg,rgb(255 255 255/.55),rgb(255 255 255/.08) 38%,rgb(255 255 255/0) 60%,rgb(255 255 255/.18));
+  --fond-verre:radial-gradient(42% 32% at 12% 8%,rgb(255 138 92/.42),transparent 70%),radial-gradient(40% 30% at 92% 18%,rgb(142 92 247/.36),transparent 70%),radial-gradient(48% 34% at 80% 78%,rgb(59 140 255/.32),transparent 70%),radial-gradient(44% 32% at 8% 88%,rgb(22 193 154/.30),transparent 70%),linear-gradient(160deg,#f4f1ff,#eef6ff 45%,#fff3ef);
+  --soft:rgb(255 255 255/.42); --nav:rgb(255 255 255/.5);
+  --coral-s:rgb(255 225 219/.62); --sun-s:rgb(255 238 200/.62); --mint-s:rgb(208 245 233/.62); --sky-s:rgb(214 230 255/.62); --grape-s:rgb(232 222 255/.62); --pink-s:rgb(255 218 234/.62);
+  --flou:blur(22px) saturate(180%);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --verre:rgb(255 255 255/.07); --verre-fort:rgb(28 34 60/.82); --verre-bord:rgb(255 255 255/.14); --verre-ombre:rgb(0 0 0/.35);
+  --reflet:linear-gradient(140deg,rgb(255 255 255/.14),rgb(255 255 255/.02) 38%,rgb(255 255 255/0) 60%,rgb(255 255 255/.06));
+  --fond-verre:radial-gradient(42% 32% at 12% 8%,rgb(255 107 87/.30),transparent 70%),radial-gradient(40% 30% at 92% 18%,rgb(142 92 247/.34),transparent 70%),radial-gradient(48% 34% at 80% 78%,rgb(59 140 255/.26),transparent 70%),radial-gradient(44% 32% at 8% 88%,rgb(22 193 154/.22),transparent 70%),linear-gradient(160deg,#0c1022,#111733 50%,#160f2a);
+  --soft:rgb(255 255 255/.06); --nav:rgb(20 26 48/.5);
+  --coral-s:rgb(255 107 87/.16); --sun-s:rgb(255 178 30/.15); --mint-s:rgb(22 193 154/.16); --sky-s:rgb(59 140 255/.18); --grape-s:rgb(142 92 247/.2); --pink-s:rgb(255 95 162/.16);
+}}
+:root[data-theme="dark"]{
+  --verre:rgb(255 255 255/.07); --verre-fort:rgb(28 34 60/.82); --verre-bord:rgb(255 255 255/.14); --verre-ombre:rgb(0 0 0/.35);
+  --reflet:linear-gradient(140deg,rgb(255 255 255/.14),rgb(255 255 255/.02) 38%,rgb(255 255 255/0) 60%,rgb(255 255 255/.06));
+  --fond-verre:radial-gradient(42% 32% at 12% 8%,rgb(255 107 87/.30),transparent 70%),radial-gradient(40% 30% at 92% 18%,rgb(142 92 247/.34),transparent 70%),radial-gradient(48% 34% at 80% 78%,rgb(59 140 255/.26),transparent 70%),radial-gradient(44% 32% at 8% 88%,rgb(22 193 154/.22),transparent 70%),linear-gradient(160deg,#0c1022,#111733 50%,#160f2a);
+  --soft:rgb(255 255 255/.06); --nav:rgb(20 26 48/.5);
+  --coral-s:rgb(255 107 87/.16); --sun-s:rgb(255 178 30/.15); --mint-s:rgb(22 193 154/.16); --sky-s:rgb(59 140 255/.18); --grape-s:rgb(142 92 247/.2); --pink-s:rgb(255 95 162/.16);
+}
+html{background:var(--bg)}
+html::before{content:"";position:fixed;inset:0;z-index:-1;background:var(--fond-verre);pointer-events:none}
+body{background:transparent}
+body::before{background:var(--nav);backdrop-filter:var(--flou);-webkit-backdrop-filter:var(--flou)}
+/* surfaces de verre */
+.card,.tuile,.choix-st,.choix-b,.seg,nav.tabs button,aside.side,.coach-bulle{
+  background:var(--reflet),var(--verre)!important;backdrop-filter:var(--flou);-webkit-backdrop-filter:var(--flou);
+  border:1px solid var(--verre-bord);box-shadow:inset 0 1px 0 rgb(255 255 255/.55),inset 0 -1px 0 rgb(255 255 255/.12),0 10px 30px var(--verre-ombre)}
+.card{border-radius:24px}
+.tile{backdrop-filter:var(--flou);-webkit-backdrop-filter:var(--flou);border:1px solid var(--verre-bord);box-shadow:inset 0 1px 0 rgb(255 255 255/.5),0 8px 22px var(--verre-ombre);background-image:var(--reflet)}
+.choix-st:has(input:checked){background:var(--reflet),var(--grape-s)!important;border-color:var(--grape)}
+.hero{position:relative;overflow:hidden;background:linear-gradient(140deg,rgb(255 255 255/.22),rgb(255 255 255/0) 45%),linear-gradient(135deg,rgb(52 44 140/.82),rgb(29 37 71/.80))!important;backdrop-filter:var(--flou);-webkit-backdrop-filter:var(--flou);border:1px solid rgb(255 255 255/.28);box-shadow:inset 0 1px 0 rgb(255 255 255/.4),0 16px 38px rgb(40 30 120/.30)}
+/* boutons : effet bulle */
+.btn{box-shadow:inset 0 1px 0 rgb(255 255 255/.5),inset 0 12px 16px -10px rgb(255 255 255/.45),0 6px 16px var(--verre-ombre);transition:transform .15s,filter .15s}
+.btn:active{transform:scale(.97)}
+.btn.ghost,.btn.danger{backdrop-filter:var(--flou);-webkit-backdrop-filter:var(--flou);border:1px solid var(--verre-bord)}
+.ico{box-shadow:inset 0 1px 0 rgb(255 255 255/.5)}
+input,select,textarea{background:var(--verre)!important;border-color:var(--verre-bord)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+input:focus,select:focus,textarea:focus{border-color:var(--sky)!important;background:var(--verre-fort)!important}
+.item:hover{background:var(--soft)}
+/* barre du bas : capsule flottante */
+nav.bottom{background:var(--reflet),var(--nav)!important;backdrop-filter:blur(26px) saturate(190%);-webkit-backdrop-filter:blur(26px) saturate(190%);border:1px solid var(--verre-bord)!important;box-shadow:inset 0 1px 0 rgb(255 255 255/.6),0 14px 40px var(--verre-ombre)!important}
+@media (max-width:619px){nav.bottom{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border-radius:30px;padding-bottom:6px}}
+.fab{box-shadow:inset 0 1px 0 rgb(255 255 255/.6),inset 0 14px 18px -10px rgb(255 255 255/.5),0 10px 24px rgb(255 95 126/.45)}
+/* fenêtres */
+.sheet-bg{background:rgb(29 37 71/.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.sheet{background:var(--reflet),var(--verre-fort)!important;backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border:1px solid var(--verre-bord);box-shadow:inset 0 1px 0 rgb(255 255 255/.6),0 -10px 40px var(--verre-ombre)}
+.sheet .card{background:var(--verre)!important}
 </style>
 </head>
 <body>
@@ -1788,6 +1839,7 @@ const amis=()=>SOC.amities.filter(x=>x.statut==="ok").map(x=>{const o=x.membres.
 // bilan partageable, badges et défis
 // =====================================================================
 const NOUVEAUTES_APP=[
+  {id:"app-10",date:"2026-11-16",titre:"Nouveau look « verre liquide »",texte:"Cartes translucides, reflets et barre de navigation flottante : l'appli fait peau neuve, en clair comme en sombre."},
   {id:"app-9",date:"2026-11-16",titre:"Installe l'appli en 3 gestes",texte:"Un guide animé montre où toucher pour mettre P'tite Éco sur ton écran d'accueil, que tu sois sur Android, Samsung, iPhone ou ordinateur."},
   {id:"app-8",date:"2026-11-16",titre:"Cloche, messages, badges et parrainage",texte:"La cloche en haut regroupe tes rappels, l'activité (commentaires, foyer, amis) et les nouveautés. Envoie un message privé à un vendeur du mur, gagne des badges, relève les défis du mois, invite tes amis et partage ton bilan en story."},
   {id:"app-7",date:"2026-11-16",titre:"Prix par code-barres",texte:"Scanne un produit et donne le prix que tu l'as payé : tout le monde en profite. Tu peux aussi suivre un produit pour être prévenu quand quelqu'un trouve moins cher."},
