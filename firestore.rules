@@ -36,6 +36,35 @@ service cloud.firestore {
         && d.admins is list && d.admins.size() >= 1 && d.admins.size() <= 10;
     }
 
+    match /users/{uid}/notifs/{nid} {
+      allow read, update, delete: if connecte() && moi() == uid;
+      allow create: if connecte() && request.resource.data.de == moi()
+        && request.resource.data.keys().hasOnly(['type','texte','lien','de','deNom','date','lu'])
+        && request.resource.data.texte is string && request.resource.data.texte.size() <= 200;
+    }
+    match /convs/{cid} {
+      allow read: if connecte() && moi() in resource.data.membres;
+      allow create: if connecte() && moi() in request.resource.data.membres
+        && request.resource.data.membres.size() == 2
+        && cid == request.resource.data.membres[0] + '_' + request.resource.data.membres[1];
+      allow update: if connecte() && moi() in resource.data.membres && request.resource.data.membres == resource.data.membres;
+      match /msgs/{mid} {
+        allow read: if connecte() && moi() in get(/databases/$(database)/documents/convs/$(cid)).data.membres;
+        allow create: if connecte() && request.resource.data.auteur == moi()
+          && moi() in get(/databases/$(database)/documents/convs/$(cid)).data.membres
+          && request.resource.data.keys().hasOnly(['auteur','texte','cree'])
+          && request.resource.data.texte is string && request.resource.data.texte.size() >= 1 && request.resource.data.texte.size() <= 1000;
+      }
+    }
+    match /parrainages/{uid} {
+      allow read: if connecte();
+      allow create: if connecte() && moi() == uid && request.resource.data.keys().hasOnly(['parrain','date']);
+      allow delete: if admin();
+    }
+    match /nouveautes/{nid} {
+      allow read: if connecte();
+      allow write: if admin();
+    }
     match /users/{uid} {
       allow read, write: if connecte() && moi() == uid;
     }

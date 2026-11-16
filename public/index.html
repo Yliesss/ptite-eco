@@ -224,6 +224,21 @@ nav.bottom .fab:active{transform:translateY(-16px) scale(.94)}
 .mur-txt span{font-size:.82rem;font-weight:700;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mur-go{width:30px;height:30px;flex:none;border-radius:50%;background:rgb(255 255 255/.2);display:grid;place-items:center}
 .mur-go svg{width:18px;height:18px}
+.cloche{background:var(--grape-s);color:var(--grape-t)}
+.pastille{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--coral);color:#fff;font-size:.68rem;font-weight:900;vertical-align:1px}
+.item.non-lu{background:var(--grape-s)}
+.sheet.chat{height:min(86vh,760px);display:flex;flex-direction:column}
+.bulles{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:6px 2px;min-height:200px}
+.bulle{max-width:80%;align-self:flex-start;background:var(--soft);border-radius:18px 18px 18px 6px;padding:9px 13px;display:flex;flex-direction:column;gap:2px;overflow-wrap:anywhere}
+.bulle.moi{align-self:flex-end;background:var(--grape);color:#fff;border-radius:18px 18px 6px 18px}
+.bulle small{font-size:.68rem;opacity:.7;align-self:flex-end}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.badge{border:2px dashed var(--line);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px;color:var(--muted)}
+.badge.ok{border-style:solid;border-color:transparent;color:inherit}
+.badge b{color:var(--ink);font-size:.95rem}
+.badge>span:not(.badge-ico){font-size:.76rem;font-weight:700;line-height:1.3}
+.badge-ico{font-size:1.6rem;line-height:1}
+.badge small{font-size:.7rem;font-weight:800}
 .cal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px}
 .cal-grid>div{background:var(--soft);border-radius:16px;padding:10px 12px;display:flex;flex-direction:column}
 .cal-grid b{font-family:var(--f-display);font-size:1.7rem;line-height:1.05}
@@ -460,6 +475,8 @@ const POLITIQUE=`<h3>Qui est responsable de tes données ?</h3><p>${esc(EDITEUR.
 <h3>À l'inscription</h3><p>On te demande, si tu le veux bien, comment tu as connu l'appli et ce qui t'intéresse. Ces réponses servent seulement à des statistiques globales (combien de personnes viennent de TikTok, par exemple), sans ton nom.</p>
 <h3>Ta situation</h3><p>On te demande seulement si tu es étudiant(e) ou en activité, pour afficher les outils utiles. Rien d'autre sur ta vie n'est demandé.</p>
 <h3>Espace étudiant et position</h3><p>Ta position n'est utilisée que quand tu touches « Autour de moi » ou « Ma position », après ton accord dans le navigateur. Pour trouver les lieux proches, des coordonnées sont envoyées aux services publics de données de l'enseignement supérieur et de l'IGN, et à OpenStreetMap (carte et arrêts de transport). Ton établissement et ton adresse « Chez moi » sont enregistrés dans ton compte privé et tu peux les effacer à tout moment.</p>
+<h3>Messages et notifications</h3><p>Les messages privés ne sont lisibles que par les deux personnes de la conversation. Les notifications (commentaires, demandes d'ami, dépenses du foyer) ne sont visibles que par leur destinataire. Les notifications du téléphone sont facultatives et se désactivent dans « Mon compte ».</p>
+<h3>Parrainage</h3><p>Si tu t'inscris avec le lien d'un ami, seul son code ami et la date sont enregistrés, pour compter ses invitations.</p>
 <h3>Le mur du campus</h3><p>Ce que tu publies sur le mur de ton établissement (texte, photo, prix, commentaires) est visible par les utilisateurs connectés, avec ton prénom seulement. Tu peux supprimer tes publications à tout moment. Les publications signalées sont vérifiées et peuvent être supprimées.</p>
 <h3>Commerces</h3><p>Une fiche commerce (nom, adresse, photo, description, téléphone) est publiée par le commerçant lui-même et visible par les utilisateurs connectés. Il peut la modifier ou la retirer à tout moment. Les signalements sont anonymes pour le commerçant.</p>
 <h3>Prix partagés</h3><p>Quand tu scannes un ticket et laisses la case « Partager » cochée, seuls le produit, l'enseigne, le prix et la date sont envoyés dans une base commune. Ton ticket, ton nom, ton compte et le total de tes achats ne sont jamais partagés.</p>
@@ -708,6 +725,7 @@ function prixScanHtml(code,info){
     <label class="f">C'est quel produit de ta liste ? <span class="sub" style="display:inline">(facultatif)</span><select id="sc-pc"><option value="">— aucun —</option>${(S.catalogue||[]).slice().sort((x,y)=>x.nom.localeCompare(y.nom)).map(c=>`<option value="${c.id}" ${c.id===devine?"selected":""}>${esc(c.nom)}${c.fmt?" ("+esc(c.fmt)+")":""}</option>`).join("")}</select></label>
     <div class="err" id="sc-perr"></div>
     <button class="btn block" id="sc-pok" style="background:var(--sun);color:#5b3a00">Partager ce prix</button>
+    <button class="btn ghost block" id="sc-suivre">${suivi(code)?"✓ Prix suivi (toucher pour arrêter)":"Me prévenir si quelqu'un trouve moins cher"}</button>
     <span class="sub">Seuls le produit, le magasin, le prix et la date sont partagés, sans ton nom. Chaque prix aide tout le monde à payer moins cher.</span>
   </div>`;
 }
@@ -717,11 +735,13 @@ async function brancherPrixScan(code,info){
     try{const sn=await f.getDocs(f.query(f.collection(f.db,"prixcb"),f.where("ean","==",code)));
       const l=sn.docs.map(d=>d.data()).filter(x=>x.prix>0&&joursDepuis(x.date)<=120).sort((x,y)=>x.prix-y.prix);
       if(!a("sc-prix-liste"))return;
+      brancherPrixScan.min=l.length?l[0].prix:null;
       a("sc-prix-liste").innerHTML=l.length?`<div class="list">${l.map((x,i)=>`<div class="item" style="cursor:default"><span class="grow"><b>${esc((ENSEIGNES[x.magasin]||{nom:x.magasin}).nom)}</b><span class="sub">${x.n||1} relevé${(x.n||1)>1?"s":""} · le ${fdate(new Date(x.date+"T00:00:00"),{day:"numeric",month:"short"})}</span></span>${i===0&&l.length>1?`<span class="pill t-mint">Le moins cher</span>`:""}<b>${eur(x.prix)}</b></div>`).join("")}</div>`
         :`<span class="small muted">Aucun prix relevé pour l'instant : sois le premier !</span>`;
     }catch(e){if(a("sc-prix-liste"))a("sc-prix-liste").innerHTML=`<span class="small muted">Prix indisponibles pour le moment.</span>`}
   };
   dessiner();
+  a("sc-suivre").onclick=()=>{basculerSuivi(code,info.nom||(a("sc-pnom")?.value)||"Produit",brancherPrixScan.min);a("sc-suivre").textContent=suivi(code)?"✓ Prix suivi (toucher pour arrêter)":"Me prévenir si quelqu'un trouve moins cher"};
   a("sc-pok").onclick=async()=>{const err=a("sc-perr"),m=a("sc-pm").value,p=parseFloat((a("sc-pp").value||"").replace(/\s/g,"").replace(",","."));
     const nom=(info.inconnu?a("sc-pnom").value.trim():info.nom)||"";
     if(info.inconnu&&nom.length<3){err.textContent="Écris le nom du produit.";return}
@@ -739,7 +759,7 @@ async function brancherPrixScan(code,info){
       // relié à un produit de la liste : met aussi à jour la comparaison des magasins
       const cid=a("sc-pc").value;let lie=false;
       if(cid){const c=cat(cid);if(c){c.prix=c.prix||{};c.prixDate=c.prixDate||{};c.prix[m]=pr;c.prixDate[m]=date;lie=true;if(prixPartageable(cid,m))envoyerPrixCommuns(m,[{id:cid,p:pr}],date)}}
-      S.contribPrix=(S.contribPrix||0)+1;persist();
+      compterContrib(1);persist();
       toast("Merci ! Prix partagé"+(lie?" et ajouté à ta liste":""));a("sc-pp").value="";dessiner();
     }catch(x){err.textContent="Partage impossible : "+errFr(x)}
     a("sc-pok").disabled=false;
@@ -828,6 +848,7 @@ function startApp(){
     <header class="topbar">
       <button class="brand" data-tab="accueil" aria-label="Accueil">${MARK}</button>
       <div class="grow" style="min-width:0"><span class="lbl">P'tite Éco</span><h1 id="h-title"></h1></div>
+      <button class="cart cloche" data-act="notifs" id="h-cloche" aria-label="Notifications">${svg(ICO_CLOCHE)}<b id="h-cl-nb" hidden></b></button>
       <button class="cart" data-act="panier" id="h-panier" aria-label="Mon panier" hidden>${svg('<path d="M3 4h2l2.4 11h10.2L20 8H6.2"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/>')}<b id="h-nb" hidden></b></button>
       <button class="avatar" data-act="compte" aria-label="Mon compte">${esc(profil.prenom[0]?.toUpperCase()||"?")}</button>
     </header>
@@ -851,7 +872,7 @@ function show(t){
   a("h-title").textContent=titres[t];
   render();window.scrollTo(0,0);
 }
-function render(){({accueil:vAccueil,abos:vAbos,courses:vCourses,repas:vRepas,prix:vPrix,foyer:vFoyer,etudes:vEtudes,commerces:vCommerces,admin:vAdmin,campus:vCampus})[tab]();majPanier()}
+function render(){({accueil:vAccueil,abos:vAbos,courses:vCourses,repas:vRepas,prix:vPrix,foyer:vFoyer,etudes:vEtudes,commerces:vCommerces,admin:vAdmin,campus:vCampus})[tab]();majPanier();if(typeof NOTIF!=="undefined"){majCloche();verifierBadges();ecrireRappelsSW()}}
 function nbPanier(){return Object.keys(S.liste).filter(id=>S.liste[id]>0&&cat(id)&&!S.coches?.[id]).length+(S.envies||[]).filter(e=>!e.achete).length}
 function majPanier(){const b=a("h-panier");if(!b)return;b.hidden=false;const n=nbPanier()+((typeof PAN!=="undefined"&&PAN.invits.length)||0),x=a("h-nb");x.hidden=!n;x.textContent=n;
   if(tab==="courses")a("h-title").textContent=sousOnglet==="achats"?"Achats":"Courses"}
@@ -1100,6 +1121,7 @@ function bilanSheet(){
     <div class="card" style="box-shadow:none;border:2px solid var(--line)"><h3>Où est parti l'argent</h3>
       ${[["Abonnements et assurances",moisAff.abos],["Dépenses fixes",moisAff.fixes],...cats].filter(x=>x[1]>0).map(([n,v])=>`<div class="row between small" style="padding:5px 0;border-top:1px solid var(--line)"><span>${esc(n)}</span><b>${eur(v)}</b></div>`).join("")||`<span class="small muted">Aucune dépense enregistrée.</span>`}</div>
     <span class="sub">Les dépenses fixes sont comptées avec leur montant actuel.</span>
+    <button class="btn coral block" data-act="partager-bilan">Partager mon bilan en story</button>
   </div></div>`;
   const close=()=>root.innerHTML="";a("sx").onclick=close;a("sb").onclick=e=>{if(e.target.id==="sb")close()};
 }
@@ -1128,6 +1150,7 @@ function vAccueil(){
   ${vide?"":`<div class="grid2"><button class="btn mint" data-act="add-rev" style="font-size:1.02rem;padding:16px 10px">+ Argent reçu</button><button class="btn coral" data-act="add-achat" style="font-size:1.02rem;padding:16px 10px">− J'ai dépensé</button></div>`}
   ${vide?"":vPro()}
   ${vide?"":vBilanTuile()}
+  ${vide?"":vDefis()}
   ${vide?"":vObjectifs()}
   ${vide?"":vAchats()}
   ${vide?"":vRecus()}
@@ -1473,7 +1496,7 @@ function revueTicket(r){
     r.lignes.forEach((l,i)=>{const id=out.querySelector(`[data-tk="${i}"]`).value,v=parseFloat(out.querySelector(`[data-tp="${i}"]`).value.replace(",","."));
       if(!(id&&v>0))return;part.push({id,p:v});
       if(a("tk-px").checked){const c=cat(id);c.prix=c.prix||{};c.prixDate=c.prixDate||{};c.prix[m]=v;c.prixDate[m]=dt;n++}});
-    if(a("tk-share")?.checked&&part.length)envoyerPrixCommuns(m,part,dt).then(k=>{if(k){S.contribPrix=(S.contribPrix||0)+k;persist();toast(`${k} prix partagés avec la communauté, merci !`)}});
+    if(a("tk-share")?.checked&&part.length)envoyerPrixCommuns(m,part,dt).then(k=>{if(k){compterContrib(k);persist();toast(`${k} prix partagés avec la communauté, merci !`)}});
     if(a("tk-dep").checked){const v=parseFloat(a("tk-tot").value.replace(",","."));if(v>0){S.achats=S.achats||[];S.achats.push({id:u(),montant:v,nom:"Courses "+mag(m).nom,cat:"courses",date:(r.date&&/^\d{4}-\d{2}-\d{2}$/.test(r.date))?r.date:iso(new Date())})}}
     persist();a("sheet-root").innerHTML="";render();toast(n?`${n} prix mis à jour pour ${mag(m).nom}`:"Ticket enregistré");
   };
@@ -1594,6 +1617,11 @@ document.addEventListener("click",e=>{
     case "ajout":ajoutSheet();break;
     case "menu":menuSheet2();break;
     case "guide":tutoriel();break;
+    case "notifs":notifsSheet();break;
+    case "inviter":inviterSheet();break;
+    case "badges":badgesSheet();break;
+    case "partager-bilan":partagerBilan();break;
+    case "notifs-tel":if(S.notifTel){S.notifTel=false;persist();toast("Notifications du téléphone désactivées");a("sheet-root").innerHTML=""}else{activerNotifsTel().then(ok=>{if(ok)a("sheet-root").innerHTML=""})}break;
     case "post-mur":a("sheet-root").innerHTML="";if(univMur())postSheet();else{show("etudes");toast("Choisis d'abord ton établissement")}break;
     case "ajout-foyer":a("sheet-root").innerHTML="";show("foyer");if(S.foyerId&&FOY.doc)depenseFoyerSheet(null);else toast("Crée d'abord ton foyer ici");break;
     case "pro-vente":sheet({titre:"Vente / encaissement "+nomPro(),btn:"Ajouter",champs:[{k:"montant",label:"Montant encaissé (€)",type:"number"},{k:"nom",label:"Client / prestation (facultatif)",ph:"Réparation vitre…"},{k:"date",label:"Date",type:"date",def:iso(new Date())}],onSave:v=>S.revenus.push({id:u(),...v,pro:true,date:v.date||iso(new Date())})});break;
@@ -1637,6 +1665,9 @@ function compteSheet(){
     <button class="btn ghost block" data-act="statut">Ma situation : ${NOM_STATUT[profil.statut]||"à indiquer"}</button>
     ${estGoogle()?`<span class="note">Connecté avec Google : ton mot de passe se gère dans ton compte Google.</span>`:`<button class="btn ghost block" id="c-pwd">Changer le mot de passe</button>`}
     <button class="btn ghost block" id="c-notif">${S.notifs?"Désactiver les notifications":"Activer les notifications"}</button>
+    <button class="btn ghost block" data-act="notifs-tel">${S.notifTel?"Désactiver les notifications du téléphone":"Activer les notifications du téléphone"}</button>
+    <button class="btn ghost block" data-act="inviter">Inviter des amis</button>
+    <button class="btn ghost block" data-act="badges">Mes badges</button>
     <button class="btn ghost block" data-act="theme">Apparence : clair ou sombre</button>
     <button class="btn ghost block" data-act="pro-reglage">${S.modePro?"Suivi pro : "+esc(nomPro()):"Séparer l'argent pro et perso"}</button>
     <button class="btn ghost block" id="c-exp">Télécharger mes données</button>
@@ -1684,7 +1715,7 @@ const nouveauCode=()=>Array.from(crypto.getRandomValues(new Uint8Array(6)),x=>CO
 const F=()=>window.FB;
 const moi=()=>fbUser?.uid;
 
-function arreterTempsReel(){if(typeof PAN!=="undefined"){if(PAN.unsub)PAN.unsub();if(PAN.unsubInv)PAN.unsubInv();PAN.unsub=PAN.unsubInv=null;PAN.remote=null;PAN.doc=null;PAN.invits=[];PAN.id=null}SOC.unsub.forEach(f=>{try{f()}catch(e){}});SOC.unsub=[];if(SOC.unsubArticles){SOC.unsubArticles();SOC.unsubArticles=null}SOC.amities=[];SOC.listes=[];SOC.articles=[];SOC.listeOuverte=null;if(typeof COMM!=="undefined")arreterPrixCommuns();if(typeof MUR!=="undefined")arreterMur();if(typeof ADM!=="undefined"){if(ADM.unsub)ADM.unsub();ADM.unsub=null;ADM.ok=false;ADM.data=null;ADM.annonce=null}document.getElementById("coach")?.remove();if(typeof FOY!=="undefined"){arreterFoyer();if(FOY.unsubInv)FOY.unsubInv();FOY.unsubInv=null;FOY.invits=[]}}
+function arreterTempsReel(){if(typeof PAN!=="undefined"){if(PAN.unsub)PAN.unsub();if(PAN.unsubInv)PAN.unsubInv();PAN.unsub=PAN.unsubInv=null;PAN.remote=null;PAN.doc=null;PAN.invits=[];PAN.id=null}SOC.unsub.forEach(f=>{try{f()}catch(e){}});SOC.unsub=[];if(SOC.unsubArticles){SOC.unsubArticles();SOC.unsubArticles=null}SOC.amities=[];SOC.listes=[];SOC.articles=[];SOC.listeOuverte=null;if(typeof COMM!=="undefined")arreterPrixCommuns();if(typeof MUR!=="undefined")arreterMur();if(typeof NOTIF!=="undefined")arreterNotifs();if(typeof ADM!=="undefined"){if(ADM.unsub)ADM.unsub();ADM.unsub=null;ADM.ok=false;ADM.data=null;ADM.annonce=null}document.getElementById("coach")?.remove();if(typeof FOY!=="undefined"){arreterFoyer();if(FOY.unsubInv)FOY.unsubInv();FOY.unsubInv=null;FOY.invits=[]}}
 
 async function demarrerTempsReel(){
   arreterTempsReel();
@@ -1703,7 +1734,7 @@ async function demarrerTempsReel(){
     if(a("sheet-root")?.innerHTML){SOC.attente=d;return} // une fenêtre de saisie est ouverte : on applique après
     appliquerDistant(d);
   },e=>console.warn("sync",e)));
-  suivrePanier();suivreInvitations();suivreFoyer();suivreInvitsFoyer();suivrePrixCommuns();suivreAnnonce();
+  suivrePanier();suivreInvitations();suivreFoyer();suivreInvitsFoyer();suivrePrixCommuns();suivreAnnonce();suivreNotifs();
   // 2. Amitiés
   SOC.unsub.push(f.onSnapshot(f.query(f.collection(f.db,"amities"),f.where("membres","array-contains",uid)),snap=>{
     SOC.amities=snap.docs.map(d=>({id:d.id,...d.data()}));majSocial();majBadgeAmis();
@@ -1725,6 +1756,271 @@ function appliquerDistant(d){
 setInterval(()=>{if(SOC.attente&&!a("sheet-root")?.innerHTML){const d=SOC.attente;SOC.attente=null;appliquerDistant(d)}},1500);
 
 const amis=()=>SOC.amities.filter(x=>x.statut==="ok").map(x=>{const o=x.membres.find(m=>m!==moi());return {id:x.id,uid:o,nom:(x.noms||{})[o]||"Ami"}});
+
+// =====================================================================
+// Notifications (cloche), messages privés, parrainage, bonnes affaires,
+// bilan partageable, badges et défis
+// =====================================================================
+const NOUVEAUTES_APP=[
+  {id:"app-8",date:"2026-11-16",titre:"Cloche, messages, badges et parrainage",texte:"La cloche en haut regroupe tes rappels, l'activité (commentaires, foyer, amis) et les nouveautés. Envoie un message privé à un vendeur du mur, gagne des badges, relève les défis du mois, invite tes amis et partage ton bilan en story."},
+  {id:"app-7",date:"2026-11-16",titre:"Prix par code-barres",texte:"Scanne un produit et donne le prix que tu l'as payé : tout le monde en profite. Tu peux aussi suivre un produit pour être prévenu quand quelqu'un trouve moins cher."},
+  {id:"app-6",date:"2026-11-15",titre:"Calories des produits",texte:"Le scan affiche les calories pour 100 g, par portion et pour tout le paquet."},
+  {id:"app-5",date:"2026-11-15",titre:"Groupes BDE, BDS et assos",texte:"Les associations ont leur page sur le mur de la fac : suis-les pour voir leurs annonces."},
+  {id:"app-4",date:"2026-11-15",titre:"Le mur de ta fac",texte:"Ventes et troc, soirées, infos, entraide entre étudiants de ton établissement."},
+  {id:"app-3",date:"2026-11-15",titre:"Version ordinateur",texte:"Sur un grand écran, menu à gauche et tableaux sur deux colonnes."}
+];
+const NOTIF={liste:[],unsub:null,convs:[],unsubC:null,nouv:[...NOUVEAUTES_APP],affaires:[],vu:new Set(),premier:true};
+const ICO_CLOCHE='<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>';
+const ICO_MSG='<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>';
+
+// ---------- envoyer une notification à quelqu'un ----------
+async function notifier(uid,type,texte,lien){
+  if(!uid||uid===moi())return;
+  try{const f=F();await f.addDoc(f.collection(f.db,"users",uid,"notifs"),{type,texte:String(texte).slice(0,200),lien:lien||"",de:moi(),deNom:String(profil.prenom||"").slice(0,40),date:new Date().toISOString(),lu:false})}catch(e){console.warn("notif",e)}
+}
+function suivreNotifs(){
+  const f=F();if(NOTIF.unsub)NOTIF.unsub();if(NOTIF.unsubC)NOTIF.unsubC();NOTIF.premier=true;
+  NOTIF.unsub=f.onSnapshot(f.collection(f.db,"users",moi(),"notifs"),snap=>{
+    const l=snap.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(y.date||"").localeCompare(x.date||""));
+    if(!NOTIF.premier)l.filter(n=>!n.lu&&!NOTIF.vu.has(n.id)).forEach(n=>notifTelephone("P'tite Éco",n.texte,n.id));
+    l.forEach(n=>NOTIF.vu.add(n.id));NOTIF.premier=false;NOTIF.liste=l;majCloche();rafraichirNotifSheet();
+  },e=>console.warn("notifs",e));
+  let premierC=true;
+  NOTIF.unsubC=f.onSnapshot(f.query(f.collection(f.db,"convs"),f.where("membres","array-contains",moi())),snap=>{
+    const avant=Object.fromEntries(NOTIF.convs.map(c=>[c.id,c.maj]));
+    NOTIF.convs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(y.maj||"").localeCompare(x.maj||""));
+    if(!premierC)NOTIF.convs.filter(c=>convNonLue(c)&&avant[c.id]!==c.maj).forEach(c=>notifTelephone("Message de "+nomConv(c),c.dernier||"",c.id+c.maj));
+    premierC=false;majCloche();rafraichirNotifSheet();
+  },e=>console.warn("convs",e));
+  // nouveautés publiées depuis l'administration
+  f.getDocs(f.collection(f.db,"nouveautes")).then(sn=>{NOTIF.nouv=[...sn.docs.map(d=>({id:d.id,...d.data()})),...NOUVEAUTES_APP].sort((x,y)=>(y.date||"").localeCompare(x.date||""));majCloche()}).catch(()=>{});
+  setTimeout(verifierBonnesAffaires,4000);
+  setTimeout(parrainageApresInscription,2500);
+}
+function arreterNotifs(){if(NOTIF.unsub)NOTIF.unsub();if(NOTIF.unsubC)NOTIF.unsubC();NOTIF.unsub=NOTIF.unsubC=null;NOTIF.liste=[];NOTIF.convs=[];NOTIF.affaires=[]}
+const convNonLue=c=>c.dernierAuteur&&c.dernierAuteur!==moi()&&(c.maj||"")>((c.lu||{})[moi()]||"");
+const nomConv=c=>{const o=(c.membres||[]).find(m=>m!==moi());return (c.noms||{})[o]||"Quelqu'un"};
+const nouvNonVues=()=>NOTIF.nouv.filter(n=>(n.date||"")>(S.nouvVues||"2026-11-15")).length;
+function nbNonLus(){return NOTIF.liste.filter(n=>!n.lu).length+NOTIF.convs.filter(convNonLue).length+nouvNonVues()+NOTIF.affaires.filter(x=>!x.vu).length}
+function majCloche(){const b=a("h-cl-nb");if(!b)return;const n=nbNonLus();b.hidden=!n;b.textContent=n>9?"9+":n;
+  const c=a("h-cloche");if(c)c.setAttribute("aria-label",n?`Notifications (${n} non lues)`:"Notifications")}
+function rafraichirNotifSheet(){if(a("nt-sheet"))notifsSheet(NOTIF.onglet)}
+
+// ---------- la fenêtre de la cloche ----------
+function rappels(){try{return alertes(totals())}catch(e){return []}}
+function notifsSheet(onglet){
+  NOTIF.onglet=onglet||NOTIF.onglet||"activite";const og=NOTIF.onglet,root=a("sheet-root");
+  const nAct=NOTIF.liste.filter(n=>!n.lu).length+NOTIF.affaires.filter(x=>!x.vu).length,nMsg=NOTIF.convs.filter(convNonLue).length,nNv=nouvNonVues();
+  const pastille=n=>n?` <b class="pastille">${n}</b>`:"";
+  const ICN={com:ICO_MSG,foyer:icoTab("foyer"),ami:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M17 8v6M14 11h6"/>',parrain:'<path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.6 7.1 18.2l.9-5.5-4-3.9 5.5-.8z"/>',affaire:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',groupe:icoTab("campus")};
+  let corps="";
+  if(og==="activite"){
+    const R=rappels(),A=NOTIF.affaires;
+    corps=`${R.length?`<span class="lbl">Rappels</span><div class="list">${R.slice(0,6).map(x=>`<button class="item" data-nt-alerte="${esc(x.act||"")}"><span class="ico ${x.niv==="bad"?"t-coral":x.niv==="warn"?"t-sun":"t-sky"}">${svg(ICO_CLOCHE)}</span><span class="grow">${esc(x.titre)}${x.detail?`<span class="sub">${esc(x.detail)}</span>`:""}</span></button>`).join("")}</div>`:""}
+      ${A.length?`<span class="lbl">Bonnes affaires</span><div class="list">${A.map(x=>`<div class="item" style="cursor:default"><span class="ico t-mint">${svg(ICN.affaire)}</span><span class="grow"><b>${esc(x.nom)}</b><span class="sub">${eur(x.prix)} chez ${esc((ENSEIGNES[x.magasin]||{nom:x.magasin}).nom)} (avant ${eur(x.avant)})</span></span></div>`).join("")}</div>`:""}
+      <span class="lbl">Activité</span>
+      ${NOTIF.liste.length?`<div class="list">${NOTIF.liste.slice(0,40).map(n=>`<button class="item ${n.lu?"":"non-lu"}" data-nt="${n.id}"><span class="ico t-${n.type==="com"?"grape":n.type==="foyer"?"pink":n.type==="parrain"?"sun":"sky"}">${svg(ICN[n.type]||ICO_CLOCHE)}</span><span class="grow">${esc(n.texte)}<span class="sub">${ilYa(n.date)}</span></span></button>`).join("")}</div>`:`<span class="small muted">Rien pour l'instant. Tu seras prévenu quand quelqu'un commente ta publication, t'ajoute en ami ou ajoute une dépense au foyer.</span>`}`;
+  }else if(og==="messages"){
+    corps=NOTIF.convs.length?`<div class="list">${NOTIF.convs.map(c=>`<button class="item ${convNonLue(c)?"non-lu":""}" data-conv="${c.id}"><span class="ico t-${couleurNom(nomConv(c))}" style="border-radius:50%">${esc(nomConv(c)[0]?.toUpperCase()||"?")}</span><span class="grow"><b>${esc(nomConv(c))}</b><span class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.dernierAuteur===moi()?"Toi : ":""}${esc(c.dernier||c.sujet||"Nouvelle conversation")}</span></span><span class="sub">${c.maj?ilYa(c.maj):""}</span></button>`).join("")}</div>`
+      :`<span class="small muted">Aucun message. Sur le mur de ta fac, touche « Message » sous une publication pour écrire en privé à son auteur.</span>`;
+  }else{
+    corps=`<div class="list" style="gap:10px">${NOTIF.nouv.map(n=>`<div class="tile ${(n.date||"")>(S.nouvVues||"2026-11-15")?"t-grape":"t-sky"}"><span class="lbl" style="color:inherit">${n.date?fdate(new Date(n.date+"T00:00:00"),{day:"numeric",month:"long",year:"numeric"}):""}</span><b style="font-size:1rem">${esc(n.titre)}</b><span class="small">${esc(n.texte)}</span></div>`).join("")}</div>`;
+  }
+  root.innerHTML=`<div class="sheet-bg" id="sb"><div class="sheet" id="nt-sheet" role="dialog" aria-modal="true" aria-label="Notifications">
+    <div class="row between"><h2>Notifications</h2><button class="btn ghost sm" id="sx">Fermer</button></div>
+    <div class="seg" role="tablist" style="grid-template-columns:repeat(3,1fr)">${[["activite","Activité",nAct],["messages","Messages",nMsg],["nouveautes","Nouveautés",nNv]].map(([k,n,c])=>`<button role="tab" data-nto="${k}" aria-selected="${og===k}">${n}${pastille(c)}</button>`).join("")}</div>
+    ${corps}
+  </div></div>`;
+  const close=()=>{root.innerHTML="";majCloche()};a("sx").onclick=close;a("sb").onclick=e=>{if(e.target.id==="sb")close()};
+  root.querySelectorAll("[data-nto]").forEach(b=>b.onclick=()=>notifsSheet(b.dataset.nto));
+  root.querySelectorAll("[data-conv]").forEach(b=>b.onclick=()=>chatSheet(b.dataset.conv));
+  root.querySelectorAll("[data-nt-alerte]").forEach(b=>b.onclick=()=>{close();const v=b.dataset.ntAlerte;if(v==="cat-budgets")budgetsCatSheet();else if(v.startsWith("tab-"))show(v.slice(4));else show("accueil")});
+  root.querySelectorAll("[data-nt]").forEach(b=>b.onclick=()=>{const n=NOTIF.liste.find(x=>x.id===b.dataset.nt);if(!n)return;close();
+    const l=n.lien||"";if(l.startsWith("campus"))show("campus");else if(l==="foyer")show("foyer");else if(l==="amis"){sousOnglet="partage";show("courses")}else if(l.startsWith("conv:"))chatSheet(l.slice(5))});
+  // ce qu'on vient de voir est marqué comme lu
+  const f=F();
+  if(og==="activite"){NOTIF.liste.filter(n=>!n.lu).forEach(n=>{n.lu=true;f.updateDoc(f.doc(f.db,"users",moi(),"notifs",n.id),{lu:true}).catch(()=>{})});NOTIF.affaires.forEach(x=>x.vu=true)}
+  if(og==="nouveautes"&&nNv){S.nouvVues=iso(new Date());persist()}
+  majCloche();
+}
+
+// ---------- notifications sur le téléphone ----------
+const notifTelOk=()=>S.notifTel&&"Notification" in window&&Notification.permission==="granted";
+async function notifTelephone(titre,texte,tag){
+  if(!notifTelOk()||!document.hidden)return;
+  try{const reg=await navigator.serviceWorker?.ready;if(reg)reg.showNotification(titre,{body:texte,icon:"icons/icon-192.png",badge:"icons/icon-192.png",tag:tag||undefined});else new Notification(titre,{body:texte})}catch(e){}
+}
+async function activerNotifsTel(){
+  if(!("Notification" in window)){toast("Ton navigateur ne gère pas les notifications. Installe l'appli sur l'écran d'accueil.");return false}
+  const p=await Notification.requestPermission();
+  if(p!=="granted"){toast("Notifications refusées. Tu peux les autoriser dans les réglages du navigateur.");return false}
+  S.notifTel=true;persist();
+  try{const reg=await navigator.serviceWorker.ready;if(reg.periodicSync){const st=await navigator.permissions.query({name:"periodic-background-sync"}).catch(()=>null);if(!st||st.state==="granted")await reg.periodicSync.register("rappels",{minInterval:12*3600*1000})}}catch(e){}
+  ecrireRappelsSW();toast("Notifications activées");return true;
+}
+// liste des prochains prélèvements, lue par le service worker même quand l'appli est fermée
+let tRappels=null;
+function ecrireRappelsSW(){
+  clearTimeout(tRappels);tRappels=setTimeout(async()=>{
+    if(!S.notifTel||!("caches" in window))return;
+    const L=[];(S.abos||[]).filter(actif).forEach(x=>{const d=prochain(x);if(!d)return;const j=joursAvant(d);if(j>=0&&j<=7)L.push({id:x.id+"-"+iso(d),date:iso(d),titre:`${x.nom} : ${eur(x.montant)}`,texte:isAss(x)?"Renouvellement de ton assurance":"Prélèvement prévu"})});
+    try{const c=await caches.open("pm-donnees");await c.put("/rappels.json",new Response(JSON.stringify({maj:new Date().toISOString(),liste:L}),{headers:{"Content-Type":"application/json"}}))}catch(e){}
+  },1500);
+}
+
+// ---------- messages privés ----------
+async function ouvrirConv(uid,nom,sujet){
+  if(!uid||uid===moi())return;
+  const f=F(),m=[moi(),uid].sort(),id=m.join("_"),ref=f.doc(f.db,"convs",id);
+  let existe=false;try{existe=(await f.getDoc(ref)).exists()}catch(e){}
+  if(!existe){try{await f.setDoc(ref,{membres:m,noms:{[moi()]:profil.prenom,[uid]:nom||"Étudiant"},sujet:String(sujet||"").slice(0,80),dernier:"",dernierAuteur:"",maj:new Date().toISOString(),lu:{}})}catch(e){toast(errFr(e));return}}
+  chatSheet(id);
+}
+function chatSheet(id){
+  const root=a("sheet-root"),f=F(),ref=f.doc(f.db,"convs",id);let msgs=[],unsub=null,conv=NOTIF.convs.find(c=>c.id===id)||null;
+  const draw=()=>{
+    const garde=a("ch-t")?.value||"",nom=conv?nomConv(conv):"Conversation";
+    root.innerHTML=`<div class="sheet-bg" id="sb"><div class="sheet chat" role="dialog" aria-modal="true" aria-label="Messages avec ${esc(nom)}">
+      <div class="row between"><div class="row" style="gap:10px;min-width:0"><span class="ico t-${couleurNom(nom)}" style="border-radius:50%">${esc(nom[0]?.toUpperCase()||"?")}</span><div style="min-width:0"><b>${esc(nom)}</b>${conv?.sujet?`<span class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(conv.sujet)}</span>`:""}</div></div><button class="btn ghost sm" id="sx">Fermer</button></div>
+      <div class="bulles" id="ch-l">${msgs.map(m=>`<div class="bulle ${m.auteur===moi()?"moi":""}"><span>${esc(m.texte)}</span><small>${m.cree?new Date(m.cree).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):""}</small></div>`).join("")||`<span class="small muted" style="text-align:center">Écris le premier message. Reste prudent : rencontre-toi dans un lieu public et ne paie jamais d'avance.</span>`}</div>
+      <form class="row" id="ch-f" style="gap:8px"><input id="ch-t" class="grow" maxlength="1000" placeholder="Ton message…" autocomplete="off"><button class="btn sm" style="background:var(--grape)">Envoyer</button></form>
+    </div></div>`;
+    a("ch-t").value=garde;const l=a("ch-l");l.scrollTop=l.scrollHeight;
+    const close=()=>{if(unsub)unsub();root.innerHTML="";majCloche()};a("sx").onclick=close;a("sb").onclick=e=>{if(e.target.id==="sb")close()};
+    a("ch-f").onsubmit=async e=>{e.preventDefault();const t=a("ch-t").value.trim();if(!t)return;a("ch-t").value="";
+      try{const now=new Date().toISOString();await f.addDoc(f.collection(f.db,"convs",id,"msgs"),{auteur:moi(),texte:t.slice(0,1000),cree:now});
+        await f.updateDoc(ref,{dernier:t.slice(0,120),dernierAuteur:moi(),maj:now,["lu."+moi()]:now})}catch(x){toast(errFr(x))}};
+  };
+  f.getDoc(ref).then(s=>{if(s.exists()){conv={id,...s.data()};draw()}}).catch(()=>{});
+  let empreinte="";
+  unsub=f.onSnapshot(f.collection(f.db,"convs",id,"msgs"),s=>{const l=s.docs.map(d=>d.data()).sort((x,y)=>(x.cree||"").localeCompare(y.cree||""));
+    const e=l.length+"|"+(l[l.length-1]?.cree||"");if(e===empreinte)return;empreinte=e;msgs=l;if(a("ch-f"))draw();
+    f.updateDoc(ref,{["lu."+moi()]:new Date().toISOString()}).catch(()=>{})},()=>{});
+  draw();
+}
+
+// ---------- parrainage ----------
+(()=>{try{const p=new URLSearchParams(location.search).get("p");if(p&&/^[A-Za-z0-9]{6}$/.test(p))localStorage.setItem("pm-parrain",p.toUpperCase())}catch(e){}})();
+const lienParrain=()=>`https://${location.host}/?p=${profil.code||""}`;
+async function parrainageApresInscription(){
+  let code="";try{code=localStorage.getItem("pm-parrain")||""}catch(e){}
+  if(!code||!profil.nouveau||profil.parrainFait||code===profil.code)return;
+  profil.parrainFait=true;persist();try{localStorage.removeItem("pm-parrain")}catch(e){}
+  const f=F();
+  try{
+    await f.setDoc(f.doc(f.db,"parrainages",moi()),{parrain:code,date:iso(new Date())});
+    const r=await f.getDocs(f.query(f.collection(f.db,"profils"),f.where("code","==",code),f.limit(1)));
+    if(!r.empty){const p=r.docs[0];try{await ajouterAmi(code)}catch(e){}
+      notifier(p.id,"parrain",`${profil.prenom} s'est inscrit grâce à toi ! Accepte sa demande d'ami.`,"amis");toast(`Invité par ${p.data().prenom||"un ami"} : une demande d'ami lui est envoyée`)}
+  }catch(e){console.warn("parrainage",e)}
+}
+async function inviterSheet(){
+  const root=a("sheet-root"),lien=lienParrain();
+  root.innerHTML=`<div class="sheet-bg" id="sb"><div class="sheet" role="dialog" aria-modal="true" aria-label="Inviter des amis">
+    <div class="row between"><h2>Inviter des amis</h2><button class="btn ghost sm" id="sx">Fermer</button></div>
+    <div class="tile t-sun"><b style="font-size:1.05rem">Fais découvrir P'tite Éco</b><span class="small">Partage ton lien : tes amis qui s'inscrivent avec deviennent automatiquement tes amis dans l'appli, et tu gagnes le badge Ambassadeur.</span></div>
+    <div class="row" style="gap:8px"><input id="iv-l" class="grow" readonly value="${esc(lien)}" style="font-size:.85rem"><button class="btn sm" id="iv-c">Copier</button></div>
+    <button class="btn coral block" id="iv-s">${svg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/>')} Partager mon lien</button>
+    <div class="tile t-mint"><span class="lbl" style="color:inherit">Amis inscrits grâce à toi</span><b style="font-size:1.6rem" id="iv-n">…</b></div>
+  </div></div>`;
+  a("sx").onclick=()=>root.innerHTML="";a("sb").onclick=e=>{if(e.target.id==="sb")root.innerHTML=""};
+  a("iv-c").onclick=async()=>{try{await navigator.clipboard.writeText(lien);toast("Lien copié")}catch(e){a("iv-l").select();toast("Sélectionne le lien pour le copier")}};
+  a("iv-s").onclick=async()=>{const txt="J'utilise P'tite Éco pour gérer mon argent (budget, resto U à 1 €, prix des courses…). C'est gratuit :";
+    if(navigator.share){try{await navigator.share({title:"P'tite Éco",text:txt,url:lien})}catch(e){}}else{try{await navigator.clipboard.writeText(txt+" "+lien);toast("Message copié")}catch(e){}}};
+  try{const f=F(),sn=await f.getDocs(f.query(f.collection(f.db,"parrainages"),f.where("parrain","==",profil.code||"-")));S.nbFilleuls=sn.size;persist();if(a("iv-n"))a("iv-n").textContent=sn.size}catch(e){if(a("iv-n"))a("iv-n").textContent="—"}
+}
+
+// ---------- bonnes affaires (produits suivis) ----------
+const suivi=ean=>(S.suivisPrix||[]).find(x=>x.ean===ean);
+function basculerSuivi(ean,nom,prixRef){
+  S.suivisPrix=S.suivisPrix||[];
+  if(suivi(ean)){S.suivisPrix=S.suivisPrix.filter(x=>x.ean!==ean);toast("Tu ne suis plus ce produit")}
+  else{S.suivisPrix.push({ean,nom:String(nom||"Produit").slice(0,80),ref:prixRef||null,depuis:iso(new Date())});S.suivisPrix=S.suivisPrix.slice(-30);toast("Tu seras prévenu si quelqu'un trouve moins cher")}
+  persist();
+}
+async function verifierBonnesAffaires(){
+  const L=(S.suivisPrix||[]);if(!L.length)return;const f=F();NOTIF.affaires=[];
+  for(let i=0;i<L.length;i+=10){const lot=L.slice(i,i+10);
+    try{const sn=await f.getDocs(f.query(f.collection(f.db,"prixcb"),f.where("ean","in",lot.map(x=>x.ean))));
+      for(const s of lot){const pr=sn.docs.map(d=>d.data()).filter(d=>d.ean===s.ean&&d.prix>0&&joursDepuis(d.date)<=60).sort((x,y)=>x.prix-y.prix)[0];if(!pr)continue;
+        if(s.ref==null){s.ref=pr.prix;continue}
+        if(pr.prix<s.ref-0.009){NOTIF.affaires.push({ean:s.ean,nom:s.nom,prix:pr.prix,magasin:pr.magasin,avant:s.ref,vu:false});notifTelephone("Bonne affaire",`${s.nom} : ${eur(pr.prix)} chez ${(ENSEIGNES[pr.magasin]||{nom:pr.magasin}).nom}`,"affaire-"+s.ean);s.ref=pr.prix}}
+    }catch(e){console.warn("affaires",e)}}
+  persist();majCloche();
+}
+
+// ---------- bilan partageable (image pour les stories) ----------
+async function imageBilan(b){
+  const W=1080,H=1920,c=document.createElement("canvas");c.width=W;c.height=H;const g=c.getContext("2d");
+  const gr=g.createLinearGradient(0,0,W,H);gr.addColorStop(0,"#ff8a5c");gr.addColorStop(.55,"#ff5f7e");gr.addColorStop(1,"#8e5cf7");g.fillStyle=gr;g.fillRect(0,0,W,H);
+  const img=new Image();img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(MARK.replace("<svg ",'<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" '));
+  await new Promise(r=>{img.onload=r;img.onerror=r});try{g.drawImage(img,W/2-110,150,220,220)}catch(e){}
+  const txt=(t,y,taille,coul="#fff",poids=900)=>{g.fillStyle=coul;g.font=`${poids} ${taille}px Fredoka, Nunito, Arial, sans-serif`;g.textAlign="center";g.fillText(t,W/2,y)};
+  txt("Mon mois de "+MOIS[b.m],470,72);
+  const carte=(y,lab,val,coul)=>{g.fillStyle="rgba(255,255,255,.16)";g.beginPath();g.roundRect(110,y,W-220,200,44);g.fill();txt(lab,y+70,44,"rgba(255,255,255,.85)",800);txt(val,y+160,80,coul)};
+  carte(560,"Argent reçu",eur(b.recu),"#fff");carte(800,"Dépensé",eur(b.dep),"#fff");carte(1040,b.ep>0?"Mis de côté":"Il me reste",eur(b.ep>0?b.ep:Math.max(0,b.solde)),"#ffe08a");
+  txt(b.solde>=0?"Mois terminé au vert ✓":"Mois serré, on se rattrape !",1360,52,"#fff",800);
+  txt("P'tite Éco",1580,96);txt("Petites économies, grande liberté.",1660,44,"rgba(255,255,255,.9)",800);txt(location.host,1760,40,"rgba(255,255,255,.85)",700);
+  return new Promise(r=>c.toBlob(r,"image/png"));
+}
+async function partagerBilan(){
+  const t=new Date(),d=t.getDate()<=7?new Date(t.getFullYear(),t.getMonth()-1,1):t,b=bilanMois(d.getFullYear(),d.getMonth());
+  try{const blob=await imageBilan(b),file=new File([blob],`bilan-${MOIS[b.m]}.png`,{type:"image/png"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Mon bilan P'tite Éco",text:`Mon mois de ${MOIS[b.m]} avec P'tite Éco 💸 ${location.host}`});return}
+    const u=URL.createObjectURL(blob),l=document.createElement("a");l.href=u;l.download=file.name;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast("Image enregistrée : publie-la en story !");
+  }catch(e){if(e?.name!=="AbortError")toast("Partage impossible sur cet appareil")}
+}
+
+// ---------- badges et défis ----------
+function joursSansSuperflu(){const sup=new Set(["resto","loisirs","enligne"]),dates=(S.achats||[]).filter(x=>sup.has(x.cat)&&!(x.cat==="resto"&&+x.montant===1)).map(x=>x.date).sort();
+  const der=dates[dates.length-1];if(!der){const c=(S.achats||[]).length||S.revenus.length?Math.min(30,Math.floor(joursDepuis((profil.cree||iso(new Date())))) ):0;return c}
+  return Math.max(0,Math.floor(joursDepuis(der)))}
+const moisCle=()=>iso(new Date()).slice(0,7);
+function compterContrib(n=1){S.contribPrix=(S.contribPrix||0)+n;if((S.contribMois||{}).m!==moisCle())S.contribMois={m:moisCle(),n:0};S.contribMois.n+=n}
+const BADGES=[
+  {id:"debut",n:"Premiers pas",d:"Ajouter un revenu et une dépense",c:"mint",prog:()=>[(S.revenus.length?1:0)+((S.achats||[]).length?1:0),2]},
+  {id:"scan",n:"Scanneur",d:"Scanner 5 produits",c:"sky",prog:()=>[(S.scans||[]).length,5]},
+  {id:"prix",n:"Chasseur de prix",d:"Partager 10 prix",c:"sun",prog:()=>[S.contribPrix||0,10]},
+  {id:"vert",n:"Fin de mois au vert",d:"Finir un mois avec un solde positif",c:"mint",prog:()=>{const t=new Date(),d=new Date(t.getFullYear(),t.getMonth()-1,1),b=bilanMois(d.getFullYear(),d.getMonth());return [b.recu>0&&b.solde>0?1:0,1]}},
+  {id:"fourmi",n:"Fourmi",d:"Mettre de l'argent de côté ce mois-ci",c:"grape",prog:()=>[totals().epargne>0?1:0,1]},
+  {id:"ami",n:"Bien entouré",d:"Avoir un ami dans l'appli",c:"sky",prog:()=>[amis().length?1:0,1]},
+  {id:"foyer",n:"En équipe",d:"Rejoindre ou créer un foyer",c:"pink",prog:()=>[S.foyerId?1:0,1]},
+  {id:"mur",n:"Voix du campus",d:"Publier sur le mur de ta fac",c:"grape",prog:()=>[S.nbPosts||0,1]},
+  {id:"ru",n:"Habitué du RU",d:"Manger 10 fois au resto U",c:"coral",prog:()=>[(S.achats||[]).filter(x=>x.cat==="resto"&&+x.montant===1).length,10]},
+  {id:"zen",n:"Zéro superflu",d:"7 jours sans resto, loisirs ni achat en ligne",c:"mint",prog:()=>[joursSansSuperflu(),7]},
+  {id:"parrain",n:"Ambassadeur",d:"Faire inscrire un ami",c:"sun",prog:()=>[S.nbFilleuls||0,1]}
+];
+function defisDuMois(){
+  const resto=sum((S.achats||[]).filter(x=>duMois(x)&&!x.pro&&x.cat==="resto"),x=>x.montant),ep=totals().epargne,cm=(S.contribMois||{}).m===moisCle()?S.contribMois.n:0;
+  return [
+    {n:"Partage 5 prix ce mois-ci",v:cm,max:5,ok:cm>=5,txt:`${Math.min(cm,5)} / 5`},
+    {n:"Moins de 50 € de restos et fast-food",v:resto,max:50,ok:resto<=50,inverse:true,txt:`${eur(resto)} / 50 €`},
+    {n:"Mets 20 € de côté",v:ep,max:20,ok:ep>=20,txt:`${eur(Math.min(ep,20))} / 20 €`}
+  ];
+}
+function vDefis(){
+  const D=defisDuMois(),nb=BADGES.filter(b=>{const [v,m]=b.prog();return v>=m}).length;
+  return `<div class="card">
+    <div class="row between"><h3>Défis de ${MOIS[new Date().getMonth()]}</h3><button class="btn ghost sm" data-act="badges">Badges ${nb}/${BADGES.length}</button></div>
+    ${D.map(d=>{const r=Math.min(1,d.v/d.max),col=d.inverse?(d.v>d.max?"var(--coral)":r>.8?"var(--sun)":"var(--mint)"):(d.ok?"var(--mint)":"var(--grape)");
+      return `<div class="stack" style="gap:4px"><div class="row between small"><span>${d.ok&&!d.inverse?"✓ ":""}${esc(d.n)}</span><b>${d.txt}</b></div><div class="hbar" style="height:9px"><span style="width:${Math.max(4,r*100)}%;background:${col}"></span></div></div>`}).join("")}
+  </div>`;
+}
+function badgesSheet(){
+  const root=a("sheet-root");
+  root.innerHTML=`<div class="sheet-bg" id="sb"><div class="sheet" role="dialog" aria-modal="true" aria-label="Badges">
+    <div class="row between"><h2>Mes badges</h2><button class="btn ghost sm" id="sx">Fermer</button></div>
+    <div class="badges">${BADGES.map(b=>{const [v,m]=b.prog(),ok=v>=m;return `<div class="badge ${ok?"ok t-"+b.c:""}"><span class="badge-ico">${ok?"★":"☆"}</span><b>${esc(b.n)}</b><span>${esc(b.d)}</span>${ok?"":`<div class="hbar" style="height:6px;width:100%"><span style="width:${Math.min(100,v/m*100)}%;background:var(--grape)"></span></div><small>${Math.min(v,m)} / ${m}</small>`}</div>`}).join("")}</div>
+  </div></div>`;
+  a("sx").onclick=()=>root.innerHTML="";a("sb").onclick=e=>{if(e.target.id==="sb")root.innerHTML=""};
+}
+let tBadges=null;
+function verifierBadges(){clearTimeout(tBadges);tBadges=setTimeout(()=>{try{
+  S.badges=S.badges||[];const neufs=BADGES.filter(b=>{const [v,m]=b.prog();return v>=m&&!S.badges.includes(b.id)});
+  if(!neufs.length)return;const premiere=!S.badges.length&&neufs.length>2;neufs.forEach(b=>S.badges.push(b.id));persist();
+  if(!premiere)neufs.forEach((b,i)=>setTimeout(()=>toast("Nouveau badge : "+b.n+" ★"),i*1600));
+}catch(e){}},800)}
+
 
 // ================= Le mur du campus (petit réseau social par établissement) =================
 // campus/{établissement}/posts/{id} : {auteur, nom, type, texte, prix, quand, lieu, photo, cree, likes, nbCom, signalements}
@@ -1773,6 +2069,7 @@ function cartePost(p){
       <button class="pa ${aime?"on":""}" data-like="${p.id}" aria-pressed="${aime}" aria-label="J'aime">${svg('<path d="M12 21s-8-4.5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.5-8 11-8 11z"/>')}<span>${lk.length||""}</span></button>
       <button class="pa" data-com="${p.id}" aria-label="Commentaires">${svg(TYPES_POST.discussion[2])}<span>${p.nbCom||""}</span>${p.type==="vente"&&!moiAuteur?`<span style="margin-left:2px">Je suis intéressé</span>`:""}</button>
       <span class="grow"></span>
+      ${moiAuteur?"":`<button class="pa" data-msg="${p.id}" aria-label="Message privé">${svg(ICO_MSG)}<span>Message</span></button>`}
       ${moiAuteur?`<button class="pa" data-psup="${p.id}" aria-label="Supprimer">${svg('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>')}</button>`:`<button class="pa" data-psig="${p.id}" aria-label="Signaler">${svg('<path d="M5 21V4h11l-1.5 4L16 12H5"/>')}</button>`}
     </div></article>`;
 }
@@ -1806,6 +2103,7 @@ function vCampus(){
     p.likes={...(p.likes||{})};if(aime)delete p.likes[moi()];else p.likes[moi()]=true;vCampus();
     f.updateDoc(ref(p.id),{["likes."+moi()]:aime?f.deleteField():true}).catch(e=>toast(errFr(e)))});
   el.querySelectorAll("[data-com]").forEach(b=>b.onclick=()=>commentsSheet(b.dataset.com));
+  el.querySelectorAll("[data-msg]").forEach(b=>b.onclick=()=>{const p=MUR.posts.find(x=>x.id===b.dataset.msg);if(p)ouvrirConv(p.auteur,p.nom,"À propos de : "+p.texte.slice(0,60))});
   el.querySelectorAll("[data-psig]").forEach(b=>b.onclick=async()=>{if(!b.dataset.ok){b.dataset.ok=1;b.innerHTML="<span>Signaler ?</span>";return}
     try{await f.updateDoc(ref(b.dataset.psig),{["signalements."+moi()]:iso(new Date())});toast("Merci, la publication a été signalée")}catch(e){toast(errFr(e))}});
   el.querySelectorAll("[data-psup]").forEach(b=>b.onclick=async()=>{if(!b.dataset.ok){b.dataset.ok=1;b.innerHTML="<span>Supprimer ?</span>";return}
@@ -1841,7 +2139,7 @@ function postSheet(gid){
       const quand=a("ps-q")?.value?new Date(a("ps-q").value).toISOString():"";
       const gs=a("ps-g")?.value||"",gg=gs?groupe(gs):null;
       const data={auteur:moi(),nom:String(profil.prenom||"Étudiant").slice(0,40),type,texte,prix,quand,lieu:(a("ps-l")?.value||"").trim().slice(0,80),photo,cree:new Date().toISOString(),likes:{},nbCom:0,signalements:{},groupe:gg?gg.id:"",groupeNom:gg?gg.nom.slice(0,50):"",groupeType:gg?gg.type:""};
-      try{await F().addDoc(colPosts(),data);root.innerHTML="";MUR.filtre="";MUR.vue=gg?gg.id:null;toast(gg?"Annonce publiée pour "+gg.nom:"Publié sur le mur !");if(tab!=="campus")show("campus");else vCampus()}catch(x){err.textContent="Publication impossible : "+errFr(x)}};
+      try{await F().addDoc(colPosts(),data);root.innerHTML="";MUR.filtre="";MUR.vue=gg?gg.id:null;S.nbPosts=(S.nbPosts||0)+1;persist();toast(gg?"Annonce publiée pour "+gg.nom:"Publié sur le mur !");if(tab!=="campus")show("campus");else vCampus()}catch(x){err.textContent="Publication impossible : "+errFr(x)}};
   };
   draw();
 }
@@ -1928,7 +2226,8 @@ function commentsSheet(pid){
     const close=()=>{if(unsub)unsub();root.innerHTML="";vCampus()};a("sx").onclick=close;a("sb").onclick=e=>{if(e.target.id==="sb")close()};
     a("cm-f").onsubmit=async e=>{e.preventDefault();const t=a("cm-t").value.trim();if(!t)return;a("cm-t").value="";
       try{await f.addDoc(f.collection(f.db,"campus",univMur(),"posts",pid,"coms"),{auteur:moi(),nom:String(profil.prenom||"Étudiant").slice(0,40),texte:t.slice(0,300),cree:new Date().toISOString()});
-        await f.updateDoc(f.doc(f.db,"campus",univMur(),"posts",pid),{nbCom:(p.nbCom||0)+1});p.nbCom=(p.nbCom||0)+1}catch(x){toast(errFr(x))}};
+        await f.updateDoc(f.doc(f.db,"campus",univMur(),"posts",pid),{nbCom:(p.nbCom||0)+1});
+        notifier(p.auteur,"com",`${profil.prenom} a commenté ${p.groupe?"l'annonce de "+(p.groupeNom||"ton groupe"):"ta publication"} : « ${t.slice(0,60)} »`,"campus:"+pid);p.nbCom=(p.nbCom||0)+1}catch(x){toast(errFr(x))}};
     root.querySelectorAll("[data-cdel]").forEach(b=>b.onclick=()=>f.deleteDoc(f.doc(f.db,"campus",univMur(),"posts",pid,"coms",b.dataset.cdel)).catch(x=>toast(errFr(x))));
   };
   unsub=f.onSnapshot(f.collection(f.db,"campus",univMur(),"posts",pid,"coms"),s=>{coms=s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(x.cree||"").localeCompare(y.cree||""));if(a("cm-f"))draw()},()=>{});
@@ -1985,6 +2284,8 @@ function menuSheet2(){
   grilleSheet("Toutes les rubriques","",ongletsPlus().map(id=>({n:nomTab(id)==="Abos"?"Abonnements":nomTab(id),d:D[id],c:C[id]||"sky",i:icoTab(id),attr:`data-tab="${id}"`})),
    `<div class="list">
       <button class="item" data-act="compte"><span class="ico t-sun" style="width:38px;height:38px">${esc(profil.prenom[0]?.toUpperCase()||"?")}</span><span class="grow"><b>Mon compte</b><span class="sub">Réglages, apparence, ma situation</span></span></button>
+      <button class="item" data-act="inviter"><span class="ico t-sun" style="width:38px;height:38px">${svg('<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M17 8v6M14 11h6"/>')}</span><span class="grow"><b>Inviter des amis</b><span class="sub">Partage ton lien de parrainage</span></span></button>
+      <button class="item" data-act="badges"><span class="ico t-grape" style="width:38px;height:38px">★</span><span class="grow"><b>Mes badges et défis</b><span class="sub">Ta progression</span></span></button>
       <button class="item" data-act="guide"><span class="ico t-mint" style="width:38px;height:38px">${svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/>')}</span><span class="grow"><b>Revoir le tutoriel</b><span class="sub">Je te remontre où cliquer</span></span></button>
       ${ADM.ok?`<button class="item" data-tab="admin"><span class="ico" style="width:38px;height:38px;background:var(--hero);color:#fff">${svg('<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>')}</span><span class="grow"><b>Administration</b><span class="sub">Statistiques et modération</span></span></button>`:""}
     </div>`);
@@ -2084,6 +2385,7 @@ async function chargerAdmin(){
     sur("commerces",async()=>(await f.getDocs(f.collection(f.db,"commerces"))).docs.map(d=>({id:d.id,...d.data()}))),
     sur("prix",async()=>(await f.getDocs(f.collection(f.db,"prix"))).docs.map(d=>({id:d.id,...d.data()}))),
     sur("posts",async()=>(await f.getDocs(f.collectionGroup(f.db,"posts"))).docs.map(d=>({id:d.id,chemin:d.ref.path,...d.data()}))),
+    sur("parrainages",async()=>(await f.getDocs(f.collection(f.db,"parrainages"))).docs.map(d=>d.data())),
     sur("groupes",async()=>(await f.getDocs(f.collectionGroup(f.db,"groupes"))).docs.map(d=>({id:d.id,chemin:d.ref.path,...d.data()})))
   ]);
   ADM.data=D;ADM.charge=false;if(tab==="admin"&&!a("sheet-root")?.innerHTML)vAdmin();
@@ -2112,6 +2414,14 @@ function vAdmin(){
   <div class="card"><h3>Situation</h3>${barres(cpt(ins,x=>x.statut),NOM_STATUT,"var(--grape)")}</div>
   <div class="card"><h3>Ce qui les intéresse</h3>${barres(cpt(ins,x=>x.interets||[]),Object.fromEntries(INTERETS),"var(--mint)")}</div>
   <div class="card"><h3>Appareils</h3>${barres(cpt(ins,x=>x.appareil),{android:"Android",iphone:"iPhone",ordinateur:"Ordinateur"},"var(--sky)")}</div>
+  <div class="card"><h3>Publier une nouveauté</h3>
+    <span class="small muted">Elle apparaît dans la cloche de chacun, onglet « Nouveautés », avec un point rouge.</span>
+    <label class="f">Titre<input id="nv-t" maxlength="80" placeholder="Ex : Les calories arrivent dans le scan"></label>
+    <label class="f">Texte<textarea id="nv-x" class="ta" maxlength="400" rows="3"></textarea></label>
+    <button class="btn block" id="nv-pub" style="background:var(--grape)">Publier la nouveauté</button></div>
+  <div class="card"><h3>Meilleurs parrains</h3>${(()=>{const c={};(D.parrainages||[]).forEach(x=>c[x.parrain]=(c[x.parrain]||0)+1);const L=Object.entries(c).sort((x,y)=>y[1]-x[1]).slice(0,10);
+    return L.length?L.map(([k,v],i)=>`<div class="row between small" style="padding:5px 0;border-top:1px solid var(--line)"><span>${i+1}. Code ${esc(k)}</span><b>${v} inscrit${v>1?"s":""}</b></div>`).join(""):`<span class="small muted">Aucun parrainage pour l'instant.</span>`})()}
+    <span class="sub">Le code correspond au code ami de l'utilisateur (Courses → Amis).</span></div>
   <div class="card"><h3>Annonce à tous les utilisateurs</h3>
     <span class="small muted">Elle s'affiche en haut de l'accueil de chacun, jusqu'à ce qu'il la ferme.</span>
     <label class="f">Titre<input id="ad-t" maxlength="60" value="${esc(an.titre||"")}" placeholder="Ex : Nouveau !"></label>
@@ -2134,6 +2444,8 @@ function vAdmin(){
   a("ad-rel").onclick=rel;
   a("ad-pub").onclick=async()=>{const texte=a("ad-m").value.trim(),lien=a("ad-l").value.trim();if(!texte){toast("Écris un message");return}if(lien&&!/^https:\/\//.test(lien)){toast("Le lien doit commencer par https://");return}
     try{await f.setDoc(f.doc(f.db,"admin","annonce"),{titre:a("ad-t").value.trim(),texte,lien,actif:true,maj:new Date().toISOString()});toast("Annonce publiée")}catch(e){toast(errFr(e))}};
+  a("nv-pub").onclick=async()=>{const t=a("nv-t").value.trim(),x=a("nv-x").value.trim();if(!t||!x){toast("Remplis le titre et le texte");return}
+    try{await f.addDoc(f.collection(f.db,"nouveautes"),{titre:t,texte:x,date:iso(new Date())});a("nv-t").value="";a("nv-x").value="";toast("Nouveauté publiée")}catch(e){toast(errFr(e))}};
   a("ad-off").onclick=async()=>{try{await f.setDoc(f.doc(f.db,"admin","annonce"),{titre:"",texte:"",lien:"",actif:false,maj:new Date().toISOString()});toast("Annonce retirée");vAdmin()}catch(e){toast(errFr(e))}};
   el.querySelectorAll("[data-ad-del]").forEach(b=>b.onclick=async()=>{if(!b.dataset.ok){b.dataset.ok=1;b.textContent="Confirmer ?";return}try{await f.deleteDoc(f.doc(f.db,"commerces",b.dataset.adDel));toast("Commerce supprimé");rel()}catch(e){toast(errFr(e))}});
   el.querySelectorAll("[data-ad-ok]").forEach(b=>b.onclick=async()=>{try{await f.updateDoc(f.doc(f.db,"commerces",b.dataset.adOk),{signalements:{}});toast("Signalements effacés");rel()}catch(e){toast(errFr(e))}});
@@ -2797,7 +3109,7 @@ function depenseFoyerSheet(did){
     const entre=[...root.querySelectorAll("[data-fe]:checked")].map(c=>c.dataset.fe);
     if(!(m>0)){a("df-err").textContent="Entre un montant valide.";return}if(!entre.length){a("df-err").textContent="Coche au moins une personne.";return}
     const data={type:"depense",montant:Math.round(m*100)/100,nom:a("df-n").value.trim().slice(0,50),par:a("df-p").value,entre,date:a("df-d").value||iso(new Date())};
-    try{if(x)await f.updateDoc(f.doc(f.db,"foyers",S.foyerId,"depenses",x.id),data);else await f.addDoc(col,{...data,cree:new Date().toISOString()});close();toast("Dépense commune enregistrée")}catch(er){a("df-err").textContent=errFr(er)}};
+    try{if(x)await f.updateDoc(f.doc(f.db,"foyers",S.foyerId,"depenses",x.id),data);else{await f.addDoc(col,{...data,cree:new Date().toISOString()});(FOY.doc?.membres||[]).forEach(u=>notifier(u,"foyer",`${profil.prenom} a ajouté ${data.nom||"une dépense"} : ${eur(data.montant)} au foyer`,"foyer"))}close();toast("Dépense commune enregistrée")}catch(er){a("df-err").textContent=errFr(er)}};
   if(a("df-del"))a("df-del").onclick=async e=>{const b=e.currentTarget;if(!b.dataset.ok){b.dataset.ok=1;b.textContent="Confirmer ?";return}try{await f.deleteDoc(f.doc(f.db,"foyers",S.foyerId,"depenses",x.id));close()}catch(er){toast(errFr(er))}};
 }
 
@@ -2928,6 +3240,7 @@ function screenPresentation(){
     <div class="hero" style="padding:16px"><div class="grow" style="display:flex;flex-direction:column;gap:2px"><span class="lbl">Reste à vivre ce mois</span><span class="big" style="color:#5ff0c8">412,50 €</span><span class="small" style="color:#b9c1e6">Exemple · 1 450 € reçus en novembre</span></div></div>
     <div class="stack" style="gap:10px"><button class="btn coral block" id="pr-new" style="padding:15px;font-size:1.05rem">Créer mon compte gratuit</button><button class="btn ghost block" id="pr-log">J'ai déjà un compte</button></div>
     <div class="grid2">${F6.map(f=>`<div class="card" style="gap:6px;padding:14px"><span class="ico t-${f[0]}" style="width:38px;height:38px">${svg(f[3])}</span><b>${f[1]}</b><span class="small muted" style="font-weight:600">${f[2]}</span></div>`).join("")}</div>
+    ${(()=>{try{return localStorage.getItem("pm-parrain")}catch(e){return ""}})()?`<div class="tile t-sun"><b style="font-size:1rem">Un ami t'invite sur P'tite Éco</b><span class="small">Inscris-toi : vous serez automatiquement amis dans l'appli.</span></div>`:""}
     <div class="tile t-mint"><b style="font-size:1rem">Tes données restent privées</b><span class="small">Stockées en Europe, sans publicité ni revente. Tu peux les télécharger ou tout supprimer quand tu veux.</span></div>
     <button class="btn ghost sm" type="button" data-act="vie-privee" style="align-self:center">Confidentialité</button>
   </div>`;
@@ -2947,6 +3260,7 @@ async function ajouterAmi(code){
   const autre=r.docs[0];const uid=moi(),id=[uid,autre.id].sort().join("_");
   if(SOC.amities.some(x=>x.id===id))throw new Error("Vous êtes déjà amis, ou une demande est en cours.");
   await f.setDoc(f.doc(f.db,"amities",id),{membres:[uid,autre.id],de:uid,a:autre.id,noms:{[uid]:profil.prenom,[autre.id]:autre.data().prenom||"Ami"},statut:"attente",cree:new Date().toISOString()});
+  notifier(autre.id,"ami",`${profil.prenom} t'a envoyé une demande d'ami`,"amis");
   return autre.data().prenom||"cette personne";
 }
 
