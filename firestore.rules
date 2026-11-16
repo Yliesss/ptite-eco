@@ -84,6 +84,22 @@ service cloud.firestore {
         && request.resource.data.releves.size() <= 8 && request.resource.data.n == resource.data.n + 1;
       allow delete: if admin();
     }
+    match /prixcb/{cle} {
+      allow read: if connecte();
+      allow create: if connecte()
+        && request.resource.data.keys().hasOnly(['ean','magasin','nom','marque','quantite','prix','date','releves','n','maj'])
+        && cle == request.resource.data.magasin + '__' + request.resource.data.ean
+        && request.resource.data.ean is string && request.resource.data.ean.size() >= 6 && request.resource.data.ean.size() <= 14
+        && request.resource.data.nom is string && request.resource.data.nom.size() <= 80
+        && request.resource.data.prix is number && request.resource.data.prix > 0 && request.resource.data.prix < 500
+        && request.resource.data.releves.size() <= 8 && request.resource.data.n == 1;
+      allow update: if connecte()
+        && request.resource.data.keys().hasOnly(['ean','magasin','nom','marque','quantite','prix','date','releves','n','maj'])
+        && request.resource.data.ean == resource.data.ean && request.resource.data.magasin == resource.data.magasin
+        && request.resource.data.prix is number && request.resource.data.prix > 0 && request.resource.data.prix < 500
+        && request.resource.data.releves.size() <= 8 && request.resource.data.n == resource.data.n + 1;
+      allow delete: if admin();
+    }
     match /commerces/{uid} {
       allow read: if connecte();
       allow create: if connecte() && moi() == uid && commerceValide(request.resource.data) && request.resource.data.signalements.size() == 0;

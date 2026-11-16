@@ -690,13 +690,68 @@ function scanSheet(){
     }catch(e){arreterCamera();a("sc-out").innerHTML=`<div class="err">${e?.name==="NotAllowedError"?"Accès à la caméra refusé. Autorise-le dans les réglages du navigateur, ou importe une photo.":"Caméra indisponible. Importe une photo ou tape les chiffres du code-barres."}</div>`}
   };
 }
+
+// ================= Prix par code-barres (remplis par les utilisateurs) =================
+// prixcb/{magasin__codebarres} : {ean, magasin, nom, marque, quantite, prix, date, releves:[{p,d}], n, maj}
+function devinerProduitCatalogue(nom){const t=norm(nom||"");if(!t)return "";
+  let best="",sc=0;for(const c of S.catalogue||[]){const mots=norm(c.nom).split(/\s+/).filter(w=>w.length>2);const k=mots.filter(w=>t.includes(w)).length;if(k&&k/mots.length>sc){sc=k/mots.length;best=c.id}}return sc>=.5?best:""}
+function prixScanHtml(code,info){
+  const mags=[...new Set([...favs().filter(m=>ENSEIGNES[m]),...Object.keys(ENSEIGNES)])];
+  const devine=devinerProduitCatalogue(info.nom);
+  return `<div class="card" id="sc-prix-card" style="box-shadow:none;border:2px solid var(--sun-s);gap:10px">
+    <div class="row between"><h3>Prix en magasin</h3><span class="pill t-sun">Partagé</span></div>
+    <div id="sc-prix-liste"><span class="small muted">Recherche des prix relevés…</span></div>
+    <span class="lbl">Tu l'as acheté ? Donne ton prix</span>
+    ${info.inconnu?`<label class="f">Nom du produit<input id="sc-pnom" maxlength="80" placeholder="Ex : Farine de blé T55 1 kg"></label>`:""}
+    <div class="grid2"><label class="f">Magasin<select id="sc-pm">${mags.map(m=>`<option value="${m}">${esc(ENSEIGNES[m].nom)}</option>`).join("")}</select></label>
+      <label class="f">Prix payé (€)<input id="sc-pp" inputmode="decimal" placeholder="Ex : 0,89"></label></div>
+    <label class="f">C'est quel produit de ta liste ? <span class="sub" style="display:inline">(facultatif)</span><select id="sc-pc"><option value="">— aucun —</option>${(S.catalogue||[]).slice().sort((x,y)=>x.nom.localeCompare(y.nom)).map(c=>`<option value="${c.id}" ${c.id===devine?"selected":""}>${esc(c.nom)}${c.fmt?" ("+esc(c.fmt)+")":""}</option>`).join("")}</select></label>
+    <div class="err" id="sc-perr"></div>
+    <button class="btn block" id="sc-pok" style="background:var(--sun);color:#5b3a00">Partager ce prix</button>
+    <span class="sub">Seuls le produit, le magasin, le prix et la date sont partagés, sans ton nom. Chaque prix aide tout le monde à payer moins cher.</span>
+  </div>`;
+}
+async function brancherPrixScan(code,info){
+  const f=F(),L=a("sc-prix-liste");
+  const dessiner=async()=>{
+    try{const sn=await f.getDocs(f.query(f.collection(f.db,"prixcb"),f.where("ean","==",code)));
+      const l=sn.docs.map(d=>d.data()).filter(x=>x.prix>0&&joursDepuis(x.date)<=120).sort((x,y)=>x.prix-y.prix);
+      if(!a("sc-prix-liste"))return;
+      a("sc-prix-liste").innerHTML=l.length?`<div class="list">${l.map((x,i)=>`<div class="item" style="cursor:default"><span class="grow"><b>${esc((ENSEIGNES[x.magasin]||{nom:x.magasin}).nom)}</b><span class="sub">${x.n||1} relevé${(x.n||1)>1?"s":""} · le ${fdate(new Date(x.date+"T00:00:00"),{day:"numeric",month:"short"})}</span></span>${i===0&&l.length>1?`<span class="pill t-mint">Le moins cher</span>`:""}<b>${eur(x.prix)}</b></div>`).join("")}</div>`
+        :`<span class="small muted">Aucun prix relevé pour l'instant : sois le premier !</span>`;
+    }catch(e){if(a("sc-prix-liste"))a("sc-prix-liste").innerHTML=`<span class="small muted">Prix indisponibles pour le moment.</span>`}
+  };
+  dessiner();
+  a("sc-pok").onclick=async()=>{const err=a("sc-perr"),m=a("sc-pm").value,p=parseFloat((a("sc-pp").value||"").replace(/\s/g,"").replace(",","."));
+    const nom=(info.inconnu?a("sc-pnom").value.trim():info.nom)||"";
+    if(info.inconnu&&nom.length<3){err.textContent="Écris le nom du produit.";return}
+    if(!(p>0&&p<500)){err.textContent="Entre un prix valide, par exemple 0,89.";return}
+    err.textContent="";a("sc-pok").disabled=true;const date=iso(new Date()),pr=Math.round(p*100)/100;
+    try{
+      const ref=f.doc(f.db,"prixcb",m+"__"+code);
+      await f.runTransaction(f.db,async tx=>{
+        const sn=await tx.get(ref),d=sn.exists()?sn.data():null;
+        const rel=[...(d?.releves||[]),{p:pr,d:date}].sort((x,y)=>x.d.localeCompare(y.d)).slice(-8);
+        const dMax=rel[rel.length-1].d,rec=rel.filter(r=>(new Date(dMax)-new Date(r.d))/864e5<=30).map(r=>r.p).sort((x,y)=>x-y);
+        let med=rec[Math.floor(rec.length/2)];if(d?.prix>0&&rec.length<3&&(med>d.prix*2.5||med<d.prix/2.5))med=d.prix;
+        tx.set(ref,{ean:code,magasin:m,nom:(d?.nom||nom).slice(0,80),marque:(d?.marque||info.marque||"").slice(0,60),quantite:(d?.quantite||info.quantite||"").slice(0,30),prix:med,date:dMax,releves:rel,n:(d?.n||0)+1,maj:new Date().toISOString()});
+      });
+      // relié à un produit de la liste : met aussi à jour la comparaison des magasins
+      const cid=a("sc-pc").value;let lie=false;
+      if(cid){const c=cat(cid);if(c){c.prix=c.prix||{};c.prixDate=c.prixDate||{};c.prix[m]=pr;c.prixDate[m]=date;lie=true;if(prixPartageable(cid,m))envoyerPrixCommuns(m,[{id:cid,p:pr}],date)}}
+      S.contribPrix=(S.contribPrix||0)+1;persist();
+      toast("Merci ! Prix partagé"+(lie?" et ajouté à ta liste":""));a("sc-pp").value="";dessiner();
+    }catch(x){err.textContent="Partage impossible : "+errFr(x)}
+    a("sc-pok").disabled=false;
+  };
+}
 async function chercherProduit(code){
   const out=a("sc-out");if(!out)return;out.innerHTML=`<div class="note">Recherche du produit ${esc(code)}…</div>`;
   try{
     const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${OFF_FIELDS}&lc=fr`);
     if(r.status===503||r.status===429)throw {msg:"Trop de recherches d'un coup. Attends une minute et réessaie."};
     const j=await r.json();
-    if(j.status!==1||!j.product){out.innerHTML=`<div class="card" style="box-shadow:none;border:2px solid var(--line)"><b>Produit inconnu (${esc(code)})</b><span class="small">Il n'est pas encore dans la base Open Food Facts, qui est remplie par ses utilisateurs. Tu peux l'ajouter avec l'appli gratuite Open Food Facts.</span></div>`;return}
+    if(j.status!==1||!j.product){out.innerHTML=`<div class="card" style="box-shadow:none;border:2px solid var(--line)"><b>Produit inconnu (${esc(code)})</b><span class="small">Il n'est pas encore dans la base Open Food Facts, qui est remplie par ses utilisateurs. Tu peux l'ajouter avec l'appli gratuite Open Food Facts.</span></div>`;out.insertAdjacentHTML("beforeend",prixScanHtml(code,{inconnu:true}));brancherPrixScan(code,{inconnu:true});return}
     afficherProduit(code,j.product);
   }catch(e){out.innerHTML=`<div class="err">${esc(e?.msg||"Recherche impossible. Vérifie ta connexion internet.")}</div>`}
 }
@@ -740,12 +795,14 @@ function afficherProduit(code,p){
       <div class="tile ${nova===4?"t-coral":nova===3?"t-sun":nova?"t-mint":"t-sky"}"><span class="lbl" style="color:inherit">Transformation</span><b style="font-size:1.3rem">${nova?"NOVA "+nova:"?"}</b><span class="small">${NOVA_TXT[nova]||"Inconnue"}</span></div>
     </div>
     ${calHtml}
+    ${prixScanHtml(code,{nom:[nom,p.quantity].filter(Boolean).join(" "),marque:p.brands||"",quantite:p.quantity||""})}
     ${Object.keys(NUTR_NOMS).some(k=>lv[k])?`<div class="card" style="box-shadow:none;border:2px solid var(--line);gap:6px"><h3>Pour ${u100}</h3>${Object.entries(NUTR_NOMS).filter(([k])=>lv[k]).map(([k,lab])=>{const q=nu[k+"_100g"];return `<div class="row between small"><span>${lab}${q!=null?` · ${String(Math.round(q*10)/10).replace(".",",")} g`:""}</span><span class="pill ${NIV[lv[k]]?.[1]||""}">${NIV[lv[k]]?.[0]||lv[k]}</span></div>`}).join("")}${nu["energy-kcal_100g"]!=null?`<div class="row between small"><span>Énergie</span><b>${Math.round(nu["energy-kcal_100g"])} kcal</b></div>`:""}</div>`:""}
     ${all.length?`<div class="tile t-coral"><span class="lbl" style="color:inherit">Allergènes</span><span>${esc(all.join(", "))}</span></div>`:""}
     ${add.length?`<div class="small"><b>Additifs (${add.length}) :</b> ${esc(add.join(", "))}</div>`:`<div class="small"><b>Additifs :</b> aucun indiqué</div>`}
     ${ing?`<details><summary>Composition (ingrédients)</summary><p class="small" style="margin:6px 0 0;line-height:1.5">${esc(ing)}</p></details>`:`<span class="small muted">Liste des ingrédients non renseignée.</span>`}
     <span class="sub">Données Open Food Facts (base collaborative, licence ODbL) : vérifie l'étiquette en cas d'allergie. Indications générales, pas un avis médical.</span>
   </div>`;
+  brancherPrixScan(code,{nom:[nom,p.quantity].filter(Boolean).join(" "),marque:p.brands||"",quantite:p.quantity||""});
 }
 
 // ---------- Tutoriel ----------
