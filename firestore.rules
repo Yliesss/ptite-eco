@@ -17,6 +17,16 @@ service cloud.firestore {
         && d.photo is string && d.photo.size() < 300000
         && d.independant == true;
     }
+    // anti-spam : chaque envoi met à jour limites/{uid}_{type} avec l'heure du serveur, dans le même lot
+    function limiteOk(cle, suffixe, secondes) {
+      return connecte() && cle == moi() + suffixe
+        && request.resource.data.keys().hasOnly(['t'])
+        && request.resource.data.t == request.time
+        && (resource == null || request.time > resource.data.t + duration.value(secondes, 's'));
+    }
+    function limitePosee(suffixe) {
+      return getAfter(/databases/$(database)/documents/limites/$(moi() + suffixe)).data.t == request.time;
+    }
     function postValide(d) {
       return d.keys().hasOnly(['auteur','nom','type','texte','prix','quand','lieu','photo','cree','likes','nbCom','signalements','groupe','groupeNom','groupeType'])
         && d.auteur == moi()
@@ -53,7 +63,8 @@ service cloud.firestore {
         allow create: if connecte() && request.resource.data.auteur == moi()
           && moi() in get(/databases/$(database)/documents/convs/$(cid)).data.membres
           && request.resource.data.keys().hasOnly(['auteur','texte','cree'])
-          && request.resource.data.texte is string && request.resource.data.texte.size() >= 1 && request.resource.data.texte.size() <= 1000;
+          && request.resource.data.texte is string && request.resource.data.texte.size() >= 1 && request.resource.data.texte.size() <= 1000
+          && limitePosee('_msg');
       }
     }
     match /parrainages/{uid} {
@@ -142,6 +153,18 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['source','interets','statut','date','appareil']);
       allow read, delete: if admin();
     }
+    match /limites/{cle} {
+      allow read: if connecte() && cle.matches(moi() + '_.*');
+      allow create, update: if limiteOk(cle, '_post', 20);
+      allow create, update: if limiteOk(cle, '_com', 3);
+      allow create, update: if limiteOk(cle, '_msg', 1);
+    }
+    match /stats/{jour}/actifs/{uid} {
+      allow create, update: if connecte() && moi() == uid && jour.size() == 10
+        && request.resource.data.keys().hasOnly(['r','appareil','installe','jour']);
+      allow delete: if connecte() && (moi() == uid || admin());
+      allow read: if admin();
+    }
     match /admins/{uid} {
       allow read, write: if false;
     }
@@ -174,7 +197,7 @@ service cloud.firestore {
     }
     match /campus/{univ}/posts/{pid} {
       allow read: if connecte();
-      allow create: if connecte() && postValide(request.resource.data)
+      allow create: if connecte() && postValide(request.resource.data) && limitePosee('_post')
         && (request.resource.data.get('groupe', '') == ''
             || moi() in get(/databases/$(database)/documents/campus/$(univ)/groupes/$(request.resource.data.groupe)).data.admins);
       allow update: if connecte() && seulement(['likes']) && request.resource.data.likes.diff(resource.data.likes).affectedKeys().hasOnly([moi()]);
@@ -186,7 +209,8 @@ service cloud.firestore {
         allow read: if connecte();
         allow create: if connecte() && request.resource.data.auteur == moi()
           && request.resource.data.keys().hasOnly(['auteur','nom','texte','cree'])
-          && request.resource.data.texte is string && request.resource.data.texte.size() <= 300;
+          && request.resource.data.texte is string && request.resource.data.texte.size() <= 300
+          && limitePosee('_com');
         allow delete: if connecte() && (resource.data.auteur == moi() || admin());
         allow delete: if connecte() && get(/databases/$(database)/documents/campus/$(univ)/posts/$(pid)).data.auteur == moi();
       }

@@ -3,9 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>P'tite Éco</title>
-<meta name="description" content="Gère ton budget, tes abonnements et tes courses.">
-<meta name="description" content="P'tite Éco : ton budget, tes abonnements, tes courses et un espace étudiant. Petites économies, grande liberté.">
+<title>P'tite Éco · Appli gratuite pour gérer son budget, ses abonnements et ses courses</title>
+<meta name="description" content="P'tite Éco : appli gratuite pour gérer ton budget, tes abonnements et tes courses, comparer les prix et profiter d'un espace étudiant. Petites économies, grande liberté.">
+<link rel="canonical" href="https://ptiteeco.fr/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="P'tite Éco">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://ptiteeco.fr/">
+<meta property="og:title" content="P'tite Éco · Petites économies, grande liberté">
+<meta property="og:description" content="Budget, abonnements, courses, prix partagés et espace étudiant : l'appli gratuite pour garder plus d'argent à la fin du mois.">
+<meta property="og:image" content="https://ptiteeco.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="P'tite Éco, l'appli pour gérer son argent">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="P'tite Éco · Petites économies, grande liberté">
+<meta name="twitter:description" content="Budget, abonnements, courses, prix partagés et espace étudiant : l'appli gratuite pour garder plus d'argent à la fin du mois.">
+<meta name="twitter:image" content="https://ptiteeco.fr/og.jpg">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"P'tite Éco","url":"https://ptiteeco.fr/","applicationCategory":"FinanceApplication","operatingSystem":"Android, iOS, Windows, macOS","inLanguage":"fr","description":"Appli gratuite pour gérer son budget, ses abonnements et ses courses, avec un espace étudiant.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}</script>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <meta name="theme-color" content="#1d2547">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
@@ -350,12 +367,23 @@ nav.bottom{background:var(--reflet),var(--nav)!important;backdrop-filter:blur(26
 .sheet-bg{background:rgb(29 37 71/.22);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .sheet{background:var(--reflet),var(--verre-fort)!important;backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border:1px solid var(--verre-bord);box-shadow:inset 0 1px 0 rgb(255 255 255/.6),0 -10px 40px var(--verre-ombre)}
 .sheet .card{background:var(--verre)!important}
+
+/* ================= Mode léger (téléphones modestes ou « Effets de verre » désactivés) ================= */
+html.leger{--verre:rgb(255 255 255/.88);--verre-fort:rgb(255 255 255/.97);--nav:rgb(255 255 255/.95)}
+@media (prefers-color-scheme: dark){html.leger:not([data-theme="light"]){--verre:rgb(30 37 64/.92);--verre-fort:rgb(26 32 56/.98);--nav:rgb(20 26 48/.96)}}
+html.leger[data-theme="dark"]{--verre:rgb(30 37 64/.92);--verre-fort:rgb(26 32 56/.98);--nav:rgb(20 26 48/.96)}
+html.leger *,html.leger *::before{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.leger .sheet,html.leger .card,html.leger nav.bottom{transition:none}
+/* ================= Hors connexion ================= */
+#hors-ligne{position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:8px;max-width:calc(100% - 32px);padding:8px 14px;border-radius:99px;background:rgb(29 37 71/.9);color:#fff;font-size:.82rem;font-weight:800;box-shadow:0 8px 24px rgb(0 0 0/.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#hors-ligne::before{content:"";width:8px;height:8px;border-radius:50%;background:#ffb21e;flex:none}
 </style>
 </head>
 <body>
 
 <div id="app"><div class="auth"><p class="muted">Chargement…</p></div></div>
 <div id="sheet-root"></div>
+<div id="hors-ligne" role="status" hidden>Hors connexion : tes saisies seront envoyées au retour du réseau</div>
 <div id="toast-root"></div>
 
 <script>
@@ -536,7 +564,7 @@ function persist(){
 const UNLOCK="pm-deverrouille";
 const setUnlocked=on=>{try{on?sessionStorage.setItem(UNLOCK,"1"):sessionStorage.removeItem(UNLOCK)}catch(e){}};
 const isUnlocked=()=>{try{return sessionStorage.getItem(UNLOCK)==="1"}catch(e){return false}};
-const errFr=e=>({"auth/popup-closed-by-user":"Connexion Google annulée.","auth/cancelled-popup-request":"Connexion Google annulée.","auth/popup-blocked":"La fenêtre Google a été bloquée. Autorise les fenêtres pop-up pour ce site, puis réessaie.","auth/operation-not-allowed":"La connexion avec Google n'est pas encore activée par l'administrateur de l'appli.","auth/unauthorized-domain":"Ce site n'est pas autorisé dans Firebase (Authentication → Paramètres → Domaines autorisés).","auth/account-exists-with-different-credential":"Un compte existe déjà avec cet e-mail : connecte-toi avec ton mot de passe.","auth/user-mismatch":"Ce n'est pas le même compte Google.","auth/email-already-in-use":"Un compte existe déjà avec cet e-mail.","auth/invalid-email":"Adresse e-mail invalide.","auth/weak-password":"Mot de passe trop faible (6 caractères minimum).","auth/invalid-credential":"E-mail ou mot de passe incorrect.","auth/wrong-password":"Mot de passe incorrect.","auth/user-not-found":"Aucun compte avec cet e-mail.","auth/too-many-requests":"Trop d'essais. Réessaie dans quelques minutes.","auth/network-request-failed":"Pas de connexion internet.","auth/requires-recent-login":"Reconnecte-toi puis réessaie."}[e?.code]||"Une erreur est survenue, réessaie.");
+const errFr=e=>({"trop-vite":"Doucement ! Attends quelques secondes avant de renvoyer.","auth/popup-closed-by-user":"Connexion Google annulée.","auth/cancelled-popup-request":"Connexion Google annulée.","auth/popup-blocked":"La fenêtre Google a été bloquée. Autorise les fenêtres pop-up pour ce site, puis réessaie.","auth/operation-not-allowed":"La connexion avec Google n'est pas encore activée par l'administrateur de l'appli.","auth/unauthorized-domain":"Ce site n'est pas autorisé dans Firebase (Authentication → Paramètres → Domaines autorisés).","auth/account-exists-with-different-credential":"Un compte existe déjà avec cet e-mail : connecte-toi avec ton mot de passe.","auth/user-mismatch":"Ce n'est pas le même compte Google.","auth/email-already-in-use":"Un compte existe déjà avec cet e-mail.","auth/invalid-email":"Adresse e-mail invalide.","auth/weak-password":"Mot de passe trop faible (6 caractères minimum).","auth/invalid-credential":"E-mail ou mot de passe incorrect.","auth/wrong-password":"Mot de passe incorrect.","auth/user-not-found":"Aucun compte avec cet e-mail.","auth/too-many-requests":"Trop d'essais. Réessaie dans quelques minutes.","auth/network-request-failed":"Pas de connexion internet.","auth/requires-recent-login":"Reconnecte-toi puis réessaie."}[e?.code]||"Une erreur est survenue, réessaie.");
 
 // ================= Vie privée (RGPD) =================
 // Éditeur de l'appli : à compléter avant une publication publique.
@@ -545,8 +573,8 @@ const POLITIQUE=`<h3>Qui est responsable de tes données ?</h3><p>${esc(EDITEUR.
 <h3>Quelles données ?</h3><p>Ton prénom, ton adresse e-mail, et ce que tu saisis : sommes reçues, dépenses, abonnements, assurances, magasins, liste de courses et prix. L'adresse e-mail sert à te connecter, à confirmer ton compte et à recevoir le lien « mot de passe oublié » ; aucun autre e-mail ne t'est envoyé. Si tu te connectes avec Google, l'appli reçoit seulement ton nom et ton adresse e-mail. Ton mot de passe est géré par Firebase Authentication (Google) et n'est jamais visible par l'éditeur.</p>
 <h3>Pourquoi ?</h3><p>Uniquement pour faire fonctionner l'appli et calculer ton budget. Pas de publicité, pas de revente, pas de profilage, pas d'intelligence artificielle.</p>
 <h3>Où sont-elles stockées ?</h3><p>Chez Google Firebase (sous-traitant), sur des serveurs situés dans l'Union européenne. Chaque compte n'a accès qu'à ses propres données.</p>
-<h3>Cookies et traceurs</h3><p>Aucun cookie publicitaire ni outil de mesure d'audience. L'appli garde seulement ta connexion sur cet appareil, ce qui est strictement nécessaire au service et ne demande pas de consentement.</p>
-<h3>Notifications</h3><p>Si tu les actives, l'appli t'envoie à l'ouverture des rappels sur ton budget (prélèvements, renouvellements, budget dépassé). Elles restent sur ton téléphone et se désactivent dans « Mon compte ».</p>
+<h3>Cookies et traceurs</h3><p>Aucun cookie publicitaire ni outil de mesure d'audience extérieur (pas de Google Analytics, pas de pixel). L'appli garde seulement ta connexion sur cet appareil, ce qui est strictement nécessaire au service et ne demande pas de consentement.</p>
+<h3>Statistiques d'utilisation</h3><p>Pour savoir ce qui sert vraiment, l'appli note chaque jour quelles rubriques tu as ouvertes, ton type d'appareil et si l'appli est installée. Rien de ce que tu saisis n'est concerné. Ces informations ne servent qu'à des totaux (nombre de personnes actives, rubriques les plus utilisées), ne sont lisibles que par l'éditeur et sont effacées si tu supprimes ton compte.</p><h3>Notifications</h3><p>Si tu les actives, l'appli t'envoie à l'ouverture des rappels sur ton budget (prélèvements, renouvellements, budget dépassé). Elles restent sur ton téléphone et se désactivent dans « Mon compte ».</p>
 <h3>Amis et panier partagé</h3><p>Ton prénom et ton code ami sont visibles des autres utilisateurs connectés qui saisissent ton code. Un panier partagé est visible uniquement par les personnes que tu y as ajoutées. Ton budget reste toujours privé.</p>
 <h3>À l'inscription</h3><p>On te demande, si tu le veux bien, comment tu as connu l'appli et ce qui t'intéresse. Ces réponses servent seulement à des statistiques globales (combien de personnes viennent de TikTok, par exemple), sans ton nom.</p>
 <h3>Ta situation</h3><p>On te demande seulement si tu es étudiant(e) ou en activité, pour afficher les outils utiles. Rien d'autre sur ta vie n'est demandé.</p>
@@ -919,7 +947,7 @@ const TUTO=[
   {t:"Ton compte",c:"pink",i:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>',p:"Touche la pastille ronde en haut à droite : prénom, empreinte ou visage, notifications, téléchargement de tes données et suppression du compte. Tu peux revoir ce tutoriel à tout moment depuis ce menu."}
 ];
 let tutoI=0;
-function startApp(){
+function startApp(){setTimeout(()=>noterStat(tab),0);
   document.getElementById("app").innerHTML=`<div class="wrap">
     <header class="topbar">
       <button class="brand" data-tab="accueil" aria-label="Accueil">${MARK}</button>
@@ -940,7 +968,8 @@ const tabsVisibles=()=>TABS.filter(t=>!["etudes","campus"].includes(t[0])||estEt
 function show(t){
   if((t==="etudes"||t==="campus")&&!estEtudiant())t="accueil";
   if(t==="admin"&&!ADM.ok)t="accueil";
-  tab=t;
+  tab=t;noterStat(t);
+  if(typeof MUR!=="undefined"){if(t==="campus")clearTimeout(MUR.tPause);else programmerPauseMur(60000)}
   document.querySelectorAll("section[id^=v-]").forEach(s=>s.hidden=s.id!=="v-"+t);
   majNavBas();
   const nb=document.querySelector("nav.tabs.n8 button[aria-current]");if(nb)nb.scrollIntoView({block:"nearest",inline:"center"});
@@ -1763,7 +1792,7 @@ function compteSheet(){
   (async()=>{const b=a("c-bio");if(!b)return;if(bioId()||await bioDispo()){b.hidden=false;b.onclick=async()=>{if(bioId()){try{localStorage.removeItem(cleBio())}catch(e){}if(profil.bio){delete profil.bio;persist()}close();toast("Empreinte / visage désactivé")}else if(await activerBio())close()}}})();
   a("c-del").onclick=e=>{const b=e.currentTarget;if(!b.dataset.ok){b.dataset.ok=1;b.textContent="Confirmer : tout sera effacé définitivement";return}
     demanderMdp("Supprimer mon compte","Supprimer définitivement",async()=>{
-      clearTimeout(saveTimer);await fb().deleteDoc(fb().doc(fb().db,"users",fbUser.uid));await fb().deleteDoc(fb().doc(fb().db,"profils",fbUser.uid)).catch(()=>{});await fb().deleteUser(fbUser);
+      clearTimeout(saveTimer);await Promise.all(Array.from({length:400},(_,k)=>{const d=new Date();d.setDate(d.getDate()-k);return fb().deleteDoc(fb().doc(fb().db,"stats",iso(d),"actifs",fbUser.uid)).catch(()=>{})}));await fb().deleteDoc(fb().doc(fb().db,"users",fbUser.uid));await fb().deleteDoc(fb().doc(fb().db,"profils",fbUser.uid)).catch(()=>{});await fb().deleteUser(fbUser);
       setUnlocked(false);profil=null;S=VIDE();tab="accueil";try{localStorage.removeItem("pm-a-compte")}catch(x){}toast("Compte supprimé")})};
   if(a("c-pwd"))a("c-pwd").onclick=()=>sheet({titre:"Changer le mot de passe",btn:"Changer",champs:[{k:"old",label:"Mot de passe actuel",type:"password",req:true},{k:"n1",label:"Nouveau mot de passe",type:"password",req:true},{k:"n2",label:"Confirme le nouveau",type:"password",req:true}],
     onSave:async v=>{
@@ -1832,6 +1861,23 @@ function appliquerDistant(d){
 // appelé quand une fenêtre de saisie se ferme
 setInterval(()=>{if(SOC.attente&&!a("sheet-root")?.innerHTML){const d=SOC.attente;SOC.attente=null;appliquerDistant(d)}},1500);
 
+// anti-spam : un envoi = la publication + l'heure du serveur dans limites/{uid}_{type}, en un seul lot (vérifié par les règles)
+const DELAIS={post:20,com:3,msg:1};
+function tropVite(type){try{const d=+localStorage.getItem("pm-lim-"+type)||0;return Date.now()-d<DELAIS[type]*1000+800}catch(e){return false}}
+async function envoyerLimite(type,chemin,data){
+  if(tropVite(type)){const e=new Error("trop vite");e.code="trop-vite";throw e}
+  const f=F(),id=Array.from(crypto.getRandomValues(new Uint8Array(15)),b=>"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[b%62]).join("");
+  const bt=f.writeBatch(f.db);bt.set(f.doc(f.db,...chemin,id),data);bt.set(f.doc(f.db,"limites",moi()+"_"+type),{t:f.serverTimestamp()});
+  try{localStorage.setItem("pm-lim-"+type,String(Date.now()))}catch(e){}
+  await bt.commit();return id;
+}
+// ================= Statistiques anonymes d'utilisation (aucune pub, aucun traceur externe) =================
+const STAT={r:{},jour:null,envoye:"",t:null};
+function noterStat(t){if(!fbUser||!t)return;const j=iso(new Date());if(STAT.jour!==j){STAT.jour=j;STAT.r={};STAT.envoye=""}
+  if(STAT.r[t])return;STAT.r[t]=true;clearTimeout(STAT.t);STAT.t=setTimeout(envoyerStat,STAT.envoye?20000:3000)}
+function envoyerStat(){if(!fbUser||!STAT.jour)return;const k=JSON.stringify(STAT.r);if(k===STAT.envoye)return;STAT.envoye=k;const f=F();
+  f.setDoc(f.doc(f.db,"stats",STAT.jour,"actifs",moi()),{r:{...STAT.r},appareil:plateforme(),installe:!!estInstalle(),jour:STAT.jour},{merge:true}).catch(()=>{})}
+document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeout(STAT.t);envoyerStat()}});
 const amis=()=>SOC.amities.filter(x=>x.statut==="ok").map(x=>{const o=x.membres.find(m=>m!==moi());return {id:x.id,uid:o,nom:(x.noms||{})[o]||"Ami"}});
 
 // =====================================================================
@@ -1839,6 +1885,7 @@ const amis=()=>SOC.amities.filter(x=>x.statut==="ok").map(x=>{const o=x.membres.
 // bilan partageable, badges et défis
 // =====================================================================
 const NOUVEAUTES_APP=[
+  {id:"app-11",date:"2026-11-16",titre:"Plus rapide, même sans réseau",texte:"L'appli démarre plus vite, marche hors connexion (tes saisies partent au retour du réseau) et s'allège automatiquement sur les petits téléphones. Réglage « Effets de verre » dans Mon compte → Apparence."},
   {id:"app-10",date:"2026-11-16",titre:"Nouveau look « verre liquide »",texte:"Cartes translucides, reflets et barre de navigation flottante : l'appli fait peau neuve, en clair comme en sombre."},
   {id:"app-9",date:"2026-11-16",titre:"Installe l'appli en 3 gestes",texte:"Un guide animé montre où toucher pour mettre P'tite Éco sur ton écran d'accueil, que tu sois sur Android, Samsung, iPhone ou ordinateur."},
   {id:"app-8",date:"2026-11-16",titre:"Cloche, messages, badges et parrainage",texte:"La cloche en haut regroupe tes rappels, l'activité (commentaires, foyer, amis) et les nouveautés. Envoie un message privé à un vendeur du mur, gagne des badges, relève les défis du mois, invite tes amis et partage ton bilan en story."},
@@ -1859,7 +1906,7 @@ async function notifier(uid,type,texte,lien){
 }
 function suivreNotifs(){
   const f=F();if(NOTIF.unsub)NOTIF.unsub();if(NOTIF.unsubC)NOTIF.unsubC();NOTIF.premier=true;
-  NOTIF.unsub=f.onSnapshot(f.collection(f.db,"users",moi(),"notifs"),snap=>{
+  NOTIF.unsub=f.onSnapshot(f.query(f.collection(f.db,"users",moi(),"notifs"),f.orderBy("date","desc"),f.limit(50)),snap=>{
     const l=snap.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(y.date||"").localeCompare(x.date||""));
     if(!NOTIF.premier)l.filter(n=>!n.lu&&!NOTIF.vu.has(n.id)).forEach(n=>notifTelephone("P'tite Éco",n.texte,n.id));
     l.forEach(n=>NOTIF.vu.add(n.id));NOTIF.premier=false;NOTIF.liste=l;majCloche();rafraichirNotifSheet();
@@ -1967,12 +2014,12 @@ function chatSheet(id){
     a("ch-t").value=garde;const l=a("ch-l");l.scrollTop=l.scrollHeight;
     const close=()=>{if(unsub)unsub();root.innerHTML="";majCloche()};a("sx").onclick=close;a("sb").onclick=e=>{if(e.target.id==="sb")close()};
     a("ch-f").onsubmit=async e=>{e.preventDefault();const t=a("ch-t").value.trim();if(!t)return;a("ch-t").value="";
-      try{const now=new Date().toISOString();await f.addDoc(f.collection(f.db,"convs",id,"msgs"),{auteur:moi(),texte:t.slice(0,1000),cree:now});
+      try{const now=new Date().toISOString();await envoyerLimite("msg",["convs",id,"msgs"],{auteur:moi(),texte:t.slice(0,1000),cree:now});
         await f.updateDoc(ref,{dernier:t.slice(0,120),dernierAuteur:moi(),maj:now,["lu."+moi()]:now})}catch(x){toast(errFr(x))}};
   };
   f.getDoc(ref).then(s=>{if(s.exists()){conv={id,...s.data()};draw()}}).catch(()=>{});
   let empreinte="";
-  unsub=f.onSnapshot(f.collection(f.db,"convs",id,"msgs"),s=>{const l=s.docs.map(d=>d.data()).sort((x,y)=>(x.cree||"").localeCompare(y.cree||""));
+  unsub=f.onSnapshot(f.query(f.collection(f.db,"convs",id,"msgs"),f.orderBy("cree","desc"),f.limit(150)),s=>{const l=s.docs.map(d=>d.data()).sort((x,y)=>(x.cree||"").localeCompare(y.cree||""));
     const e=l.length+"|"+(l[l.length-1]?.cree||"");if(e===empreinte)return;empreinte=e;msgs=l;if(a("ch-f"))draw();
     f.updateDoc(ref,{["lu."+moi()]:new Date().toISOString()}).catch(()=>{})},()=>{});
   draw();
@@ -2123,7 +2170,7 @@ function ilYa(isoStr){const s=(Date.now()-new Date(isoStr))/1000;if(s<60)return 
 const couleurNom=n=>["coral","sun","mint","sky","grape","pink"][[...(n||"?")].reduce((s,c)=>s+c.charCodeAt(0),0)%6];
 function suivreMur(){
   const id=univMur();if(MUR.univ===id&&MUR.unsub)return;
-  if(MUR.unsub){MUR.unsub();MUR.unsub=null}if(MUR.unsubG){MUR.unsubG();MUR.unsubG=null}MUR.univ=id;MUR.posts=[];MUR.groupes=[];MUR.vue=null;MUR.err=null;if(!id)return;
+  clearTimeout(MUR.tPause);if(MUR.unsub){MUR.unsub();MUR.unsub=null}if(MUR.unsubG){MUR.unsubG();MUR.unsubG=null}if(MUR.univ!==id){MUR.posts=[];MUR.groupes=[];MUR.vue=null}MUR.univ=id;MUR.err=null;if(!id)return;
   MUR.unsubG=F().onSnapshot(colGroupes(),snap=>{MUR.groupes=snap.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>Object.keys(y.abonnes||{}).length-Object.keys(x.abonnes||{}).length);if(tab==="campus"&&!a("sheet-root")?.innerHTML)vCampus()},()=>{});
   const f=F();MUR.charge=true;
   MUR.unsub=f.onSnapshot(f.query(colPosts(),f.orderBy("cree","desc"),f.limit(60)),snap=>{
@@ -2131,7 +2178,12 @@ function suivreMur(){
     if(tab==="campus"&&!a("sheet-root")?.innerHTML)vCampus();
   },e=>{MUR.charge=false;MUR.err="Le mur n'a pas pu se charger : "+errFr(e);if(tab==="campus")vCampus()});
 }
-function arreterMur(){if(MUR.unsub){MUR.unsub();MUR.unsub=null}if(MUR.unsubG){MUR.unsubG();MUR.unsubG=null}MUR.univ=null;MUR.posts=[];MUR.groupes=[];MUR.vue=null}
+function pauseMur(){if(MUR.unsub){MUR.unsub();MUR.unsub=null}if(MUR.unsubG){MUR.unsubG();MUR.unsubG=null}}
+function programmerPauseMur(ms){clearTimeout(MUR.tPause);if(MUR.unsub)MUR.tPause=setTimeout(pauseMur,ms)}
+document.addEventListener("visibilitychange",()=>{if(typeof MUR==="undefined")return;
+  if(document.hidden)programmerPauseMur(120000);
+  else{clearTimeout(MUR.tPause);if(tab==="campus"&&!MUR.unsub&&fbUser)vCampus()}});
+function arreterMur(){clearTimeout(MUR.tPause);if(MUR.unsub){MUR.unsub();MUR.unsub=null}if(MUR.unsubG){MUR.unsubG();MUR.unsubG=null}MUR.univ=null;MUR.posts=[];MUR.groupes=[];MUR.vue=null}
 const postVisible=p=>p.auteur===moi()||Object.keys(p.signalements||{}).length<3;
 function cartePost(p){
   const [tn,tc,ti]=TYPES_POST[p.type]||TYPES_POST.discussion,lk=Object.keys(p.likes||{}),aime=!!(p.likes||{})[moi()],moiAuteur=p.auteur===moi();
@@ -2218,7 +2270,7 @@ function postSheet(gid){
       const quand=a("ps-q")?.value?new Date(a("ps-q").value).toISOString():"";
       const gs=a("ps-g")?.value||"",gg=gs?groupe(gs):null;
       const data={auteur:moi(),nom:String(profil.prenom||"Étudiant").slice(0,40),type,texte,prix,quand,lieu:(a("ps-l")?.value||"").trim().slice(0,80),photo,cree:new Date().toISOString(),likes:{},nbCom:0,signalements:{},groupe:gg?gg.id:"",groupeNom:gg?gg.nom.slice(0,50):"",groupeType:gg?gg.type:""};
-      try{await F().addDoc(colPosts(),data);root.innerHTML="";MUR.filtre="";MUR.vue=gg?gg.id:null;S.nbPosts=(S.nbPosts||0)+1;persist();toast(gg?"Annonce publiée pour "+gg.nom:"Publié sur le mur !");if(tab!=="campus")show("campus");else vCampus()}catch(x){err.textContent="Publication impossible : "+errFr(x)}};
+      try{await envoyerLimite("post",["campus",univMur(),"posts"],data);root.innerHTML="";MUR.filtre="";MUR.vue=gg?gg.id:null;S.nbPosts=(S.nbPosts||0)+1;persist();toast(gg?"Annonce publiée pour "+gg.nom:"Publié sur le mur !");if(tab!=="campus")show("campus");else vCampus()}catch(x){err.textContent="Publication impossible : "+errFr(x)}};
   };
   draw();
 }
@@ -2304,12 +2356,12 @@ function commentsSheet(pid){
     a("cm-t").value=garde;
     const close=()=>{if(unsub)unsub();root.innerHTML="";vCampus()};a("sx").onclick=close;a("sb").onclick=e=>{if(e.target.id==="sb")close()};
     a("cm-f").onsubmit=async e=>{e.preventDefault();const t=a("cm-t").value.trim();if(!t)return;a("cm-t").value="";
-      try{await f.addDoc(f.collection(f.db,"campus",univMur(),"posts",pid,"coms"),{auteur:moi(),nom:String(profil.prenom||"Étudiant").slice(0,40),texte:t.slice(0,300),cree:new Date().toISOString()});
+      try{await envoyerLimite("com",["campus",univMur(),"posts",pid,"coms"],{auteur:moi(),nom:String(profil.prenom||"Étudiant").slice(0,40),texte:t.slice(0,300),cree:new Date().toISOString()});
         await f.updateDoc(f.doc(f.db,"campus",univMur(),"posts",pid),{nbCom:(p.nbCom||0)+1});
         notifier(p.auteur,"com",`${profil.prenom} a commenté ${p.groupe?"l'annonce de "+(p.groupeNom||"ton groupe"):"ta publication"} : « ${t.slice(0,60)} »`,"campus:"+pid);p.nbCom=(p.nbCom||0)+1}catch(x){toast(errFr(x))}};
     root.querySelectorAll("[data-cdel]").forEach(b=>b.onclick=()=>f.deleteDoc(f.doc(f.db,"campus",univMur(),"posts",pid,"coms",b.dataset.cdel)).catch(x=>toast(errFr(x))));
   };
-  unsub=f.onSnapshot(f.collection(f.db,"campus",univMur(),"posts",pid,"coms"),s=>{coms=s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(x.cree||"").localeCompare(y.cree||""));if(a("cm-f"))draw()},()=>{});
+  unsub=f.onSnapshot(f.query(f.collection(f.db,"campus",univMur(),"posts",pid,"coms"),f.orderBy("cree","desc"),f.limit(200)),s=>{coms=s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(x.cree||"").localeCompare(y.cree||""));if(a("cm-f"))draw()},()=>{});
   draw();
 }
 
@@ -2535,10 +2587,27 @@ async function chargerAdmin(){
     sur("commerces",async()=>(await f.getDocs(f.collection(f.db,"commerces"))).docs.map(d=>({id:d.id,...d.data()}))),
     sur("prix",async()=>(await f.getDocs(f.collection(f.db,"prix"))).docs.map(d=>({id:d.id,...d.data()}))),
     sur("posts",async()=>(await f.getDocs(f.collectionGroup(f.db,"posts"))).docs.map(d=>({id:d.id,chemin:d.ref.path,...d.data()}))),
+    sur("actifs",async()=>{const L=[];for(let k=13;k>=0;k--){const d=new Date();d.setDate(d.getDate()-k);L.push(iso(d))}
+      return Promise.all(L.map(async j=>[j,(await f.getDocs(f.collection(f.db,"stats",j,"actifs"))).docs.map(d=>({uid:d.id,...d.data()}))]))}),
     sur("parrainages",async()=>(await f.getDocs(f.collection(f.db,"parrainages"))).docs.map(d=>d.data())),
     sur("groupes",async()=>(await f.getDocs(f.collectionGroup(f.db,"groupes"))).docs.map(d=>({id:d.id,chemin:d.ref.path,...d.data()})))
   ]);
   ADM.data=D;ADM.charge=false;if(tab==="admin"&&!a("sheet-root")?.innerHTML)vAdmin();
+}
+function vStatsUsage(A){
+  if(!A)return "";
+  const auj=(A[A.length-1]||[0,[]])[1],sem=A.slice(-7),jours={},rub={},app={},inst=new Set();
+  sem.forEach(([j,l])=>l.forEach(x=>{jours[x.uid]=(jours[x.uid]||0)+1;Object.keys(x.r||{}).forEach(t=>{(rub[t]=rub[t]||new Set()).add(x.uid)});app[x.uid]=x.appareil;if(x.installe)inst.add(x.uid)}));
+  const uniq=Object.keys(jours).length,rev=Object.values(jours).filter(n=>n>=2).length,mx=Math.max(1,...A.map(x=>x[1].length));
+  const pc=n=>uniq?Math.round(n/uniq*100)+" %":"—";
+  const cptApp={};Object.values(app).forEach(v=>cptApp[v]=(cptApp[v]||0)+1);
+  return `<div class="card"><div class="row between"><h3>Activité</h3><span class="pill t-mint">14 jours</span></div>
+    <div class="kpis">${[["Actifs aujourd'hui",auj.length,"coral"],["Actifs sur 7 j",uniq,"mint"],["Reviennent (2 jours ou +)",pc(rev),"grape"],["Appli installée",pc(inst.size),"sky"]].map(([n,v,c])=>`<div class="tile t-${c}"><span class="lbl" style="color:inherit">${n}</span><b>${v}</b></div>`).join("")}</div>
+    <div class="mini-graph" role="img" aria-label="Utilisateurs actifs par jour">${A.map(([j,l])=>`<span title="${j} : ${l.length}" style="height:${Math.max(3,l.length/mx*100)}%;background:${l.length?"var(--mint)":"var(--line)"}"></span>`).join("")}</div>
+    <div class="row between sub"><span>il y a 14 j</span><span>aujourd'hui</span></div></div>
+  <div class="card"><h3>Rubriques les plus utilisées (7 j)</h3><span class="sub">Nombre de personnes qui ont ouvert chaque rubrique.</span>
+    ${barres(Object.fromEntries(Object.entries(rub).map(([k,v])=>[k,v.size])),Object.fromEntries(Object.keys(rub).map(k=>[k,k==="abos"?"Abonnements":nomTab(k)])),"var(--mint)")}</div>
+  <div class="card"><h3>Sur quoi ils l'utilisent (7 j)</h3>${barres(cptApp,{android:"Android",samsung:"Samsung Internet",iphone:"iPhone",ordi:"Ordinateur"},"var(--sky)")}</div>`;
 }
 function barres(obj,noms,col){const L=Object.entries(obj).sort((x,y)=>y[1]-x[1]),mx=Math.max(1,...L.map(x=>x[1])),tot=L.reduce((s,x)=>s+x[1],0)||1;
   return L.length?L.map(([k,v])=>`<div class="stack" style="gap:3px"><div class="row between small"><span>${esc(noms[k]||k||"Non renseigné")}</span><b>${v} <span class="muted" style="font-weight:700">(${Math.round(v/tot*100)} %)</span></b></div><div class="hbar" style="height:10px"><span style="width:${v/mx*100}%;background:${col}"></span></div></div>`).join(""):`<span class="small muted">Pas encore de données.</span>`}
@@ -2557,6 +2626,7 @@ function vAdmin(){
     ${[["Utilisateurs",D.utilisateurs??"—","coral"],["Inscrits 7 j",j7,"mint"],["Commerces",com.length,"grape"],["Prix partagés",px.length,"sky"]].map(([n,v,c])=>`<div class="tile t-${c}"><span class="lbl" style="color:inherit">${n}</span><b style="font-size:1.6rem">${v}</b></div>`).join("")}
   </div>
   ${D.err?`<div class="note">${esc(D.err.join(" · "))}</div>`:""}
+  ${vStatsUsage(D.actifs)}
   <div class="card"><h3>Inscriptions sur 30 jours</h3>
     <div class="mini-graph" role="img" aria-label="Inscriptions par jour">${jours.map(([s,v])=>`<span title="${s} : ${v}" style="height:${Math.max(3,v/mxj*100)}%;background:${v?"var(--coral)":"var(--line)"}"></span>`).join("")}</div>
     <div class="row between sub"><span>il y a 30 j</span><span>aujourd'hui</span></div></div>
@@ -3342,15 +3412,22 @@ function budgetsCatSheet(){
 function depensesCatMois(){const r={};(S.achats||[]).filter(x=>duMois(x)&&!x.pro).forEach(x=>{const k=x.cat||"autre";r[k]=(r[k]||0)+(+x.montant||0)});return r}
 
 // ================= Thème clair / sombre =================
-function appliquerTheme(){let t="auto";try{t=localStorage.getItem("pm-theme")||"auto"}catch(e){}
+// téléphone modeste : peu de mémoire ou de cœurs, économiseur de données ou transparence réduite demandée
+const appareilModeste=()=>(navigator.deviceMemory&&navigator.deviceMemory<=4)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4)||navigator.connection?.saveData===true||matchMedia("(prefers-reduced-transparency: reduce)").matches;
+function appliquerEffets(){let ef="auto";try{ef=localStorage.getItem("pm-effets")||"auto"}catch(e){}
+  document.documentElement.classList.toggle("leger",ef==="off"||(ef==="auto"&&appareilModeste()))}
+function appliquerTheme(){appliquerEffets();let t="auto";try{t=localStorage.getItem("pm-theme")||"auto"}catch(e){}
   const r=document.documentElement;if(t==="auto")r.removeAttribute("data-theme");else r.setAttribute("data-theme",t==="sombre"?"dark":"light");
   const dark=t==="sombre"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content",dark?"#0f1424":"#1d2547")}
 appliquerTheme();
+function majReseau(){const h=a("hors-ligne");if(h)h.hidden=navigator.onLine}
+addEventListener("online",()=>{majReseau();toast("De retour en ligne : tout est synchronisé")});addEventListener("offline",majReseau);majReseau();
 try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",appliquerTheme)}catch(e){}
-function themeSheet(){let t="auto";try{t=localStorage.getItem("pm-theme")||"auto"}catch(e){}
-  sheet({titre:"Apparence",btn:"Appliquer",champs:[{k:"t",label:"Thème",type:"select",opts:[["auto","Automatique (comme le téléphone)"],["clair","Clair"],["sombre","Sombre"]]}],valeurs:{t},
-    onSave:v=>{try{localStorage.setItem("pm-theme",v.t)}catch(e){}appliquerTheme()}});
+function themeSheet(){let t="auto",ef="auto";try{t=localStorage.getItem("pm-theme")||"auto";ef=localStorage.getItem("pm-effets")||"auto"}catch(e){}
+  sheet({titre:"Apparence",btn:"Appliquer",champs:[{k:"t",label:"Thème",type:"select",opts:[["auto","Automatique (comme le téléphone)"],["clair","Clair"],["sombre","Sombre"]]},
+    {k:"ef",label:"Effets de verre (transparence et flou)",type:"select",opts:[["auto","Automatique (désactivés sur les petits téléphones)"],["on","Activés"],["off","Désactivés : plus fluide, économise la batterie"]]}],valeurs:{t,ef},
+    onSave:v=>{try{localStorage.setItem("pm-theme",v.t);localStorage.setItem("pm-effets",v.ef)}catch(e){}appliquerTheme()}});
 }
 
 // ================= Activité pro =================
@@ -3692,14 +3769,14 @@ setTimeout(()=>{if(!window.FB)document.getElementById("app").innerHTML=`<div cla
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,sendPasswordResetEmail,reauthenticateWithCredential,EmailAuthProvider,updatePassword,deleteUser,sendEmailVerification,GoogleAuthProvider,signInWithPopup,reauthenticateWithPopup} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {initializeFirestore,persistentLocalCache,doc,getDoc,setDoc,deleteDoc,collection,query,where,limit,onSnapshot,addDoc,updateDoc,getDocs,writeBatch,arrayUnion,arrayRemove,deleteField,runTransaction,getCountFromServer,orderBy,collectionGroup} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {initializeFirestore,persistentLocalCache,doc,getDoc,setDoc,deleteDoc,collection,query,where,limit,onSnapshot,addDoc,updateDoc,getDocs,writeBatch,arrayUnion,arrayRemove,deleteField,runTransaction,getCountFromServer,orderBy,collectionGroup,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import * as CFG from "./firebase-config.js";
 const app=initializeApp(CFG.firebaseConfig);
 // Protection anti-abus : active seulement si une clé reCAPTCHA v3 est renseignée dans firebase-config.js
 if(CFG.appCheckSiteKey){try{const m=await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js");m.initializeAppCheck(app,{provider:new m.ReCaptchaV3Provider(CFG.appCheckSiteKey),isTokenAutoRefreshEnabled:true})}catch(e){console.warn("App Check",e)}}
 const auth=getAuth(app);auth.languageCode="fr";
 const db=initializeFirestore(app,{localCache:persistentLocalCache()});
-window.FB={auth,db,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,sendPasswordResetEmail,reauthenticateWithCredential,EmailAuthProvider,updatePassword,deleteUser,sendEmailVerification,GoogleAuthProvider,signInWithPopup,reauthenticateWithPopup,doc,getDoc,setDoc,deleteDoc,collection,query,where,limit,onSnapshot,addDoc,updateDoc,getDocs,writeBatch,arrayUnion,arrayRemove,deleteField,runTransaction,getCountFromServer,orderBy,collectionGroup};
+window.FB={auth,db,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,sendPasswordResetEmail,reauthenticateWithCredential,EmailAuthProvider,updatePassword,deleteUser,sendEmailVerification,GoogleAuthProvider,signInWithPopup,reauthenticateWithPopup,doc,getDoc,setDoc,deleteDoc,collection,query,where,limit,onSnapshot,addDoc,updateDoc,getDocs,writeBatch,arrayUnion,arrayRemove,deleteField,runTransaction,getCountFromServer,orderBy,collectionGroup,serverTimestamp};
 window.dispatchEvent(new Event("fb-ready"));
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
