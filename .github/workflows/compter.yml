@@ -1,0 +1,26 @@
+name: Compter les utilisateurs
+on: workflow_dispatch
+jobs:
+  compter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compter
+        env:
+          CLE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$CLE" > $RUNNER_TEMP/cle.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/cle.json
+          npm i firebase-admin@12 --silent --no-audit --no-fund >/dev/null
+          cat > c.js <<'JS'
+          const a=require("firebase-admin");a.initializeApp({projectId:"mon-porte-monnaie-e3f0a"});const db=a.firestore();
+          (async()=>{
+            const n=async q=>(await q.count().get()).data().count;
+            console.log("COMPTES",await n(db.collection("users")));
+            console.log("INSCRIPTIONS",await n(db.collection("inscriptions")));
+            const s=x=>x.toISOString().slice(0,10);
+            for(let k=0;k<7;k++){const d=new Date();d.setDate(d.getDate()-k);console.log("ACTIFS",s(d),await n(db.collection("stats").doc(s(d)).collection("actifs")))}
+            const d30=new Date(Date.now()-30*864e5).toISOString().slice(0,10),d7=new Date(Date.now()-7*864e5).toISOString().slice(0,10);
+            try{console.log("INSCRITS_7J",await n(db.collection("inscriptions").where("date",">=",d7)));console.log("INSCRITS_30J",await n(db.collection("inscriptions").where("date",">=",d30)))}catch(e){console.log("ERR_DATE",e.message)}
+          })().catch(e=>{console.log("ERREUR",e.code,e.message);process.exit(1)});
+          JS
+          node c.js
