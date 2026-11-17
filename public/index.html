@@ -377,6 +377,25 @@ html.leger .sheet,html.leger .card,html.leger nav.bottom{transition:none}
 /* ================= Hors connexion ================= */
 #hors-ligne{position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:8px;max-width:calc(100% - 32px);padding:8px 14px;border-radius:99px;background:rgb(29 37 71/.9);color:#fff;font-size:.82rem;font-weight:800;box-shadow:0 8px 24px rgb(0 0 0/.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 #hors-ligne::before{content:"";width:8px;height:8px;border-radius:50%;background:#ffb21e;flex:none}
+
+/* ================= Accueil plus clair ================= */
+.hero{flex-wrap:wrap}
+.legend-hero{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;padding-top:12px;border-top:1px solid rgb(255 255 255/.14)}
+.legend-hero>span{display:inline-flex!important;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;background:rgb(255 255 255/.12);font-size:.74rem;color:#e6e9ff;width:auto!important}
+.legend-hero b{color:#fff}
+.legend-hero i{width:8px;height:8px;border-radius:50%;flex:none}
+.legend2{display:flex;flex-wrap:wrap;gap:8px}
+.legend2 span{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:var(--verre,var(--soft));border:1px solid var(--verre-bord,var(--line));font-size:.82rem;color:var(--ink)}
+.legend2 i{width:9px;height:9px;border-radius:50%;flex:none}
+.titre-sec{font-family:var(--f-display);font-size:1.15rem;margin:6px 4px -4px;color:var(--ink)}
+.ligne-budget{width:100%;gap:12px;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;padding:8px 2px;align-items:center}
+.ligne-budget+.ligne-budget,.list+.ligne-budget{border-top:1px solid var(--line);padding-top:12px}
+.ligne-budget>b{white-space:nowrap}
+details.repli>summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none}
+details.repli>summary::-webkit-details-marker{display:none}
+details.repli>summary::after{content:"";width:9px;height:9px;border-right:2.5px solid var(--muted);border-bottom:2.5px solid var(--muted);transform:rotate(45deg);margin-right:6px;transition:transform .2s}
+details.repli[open]>summary::after{transform:rotate(-135deg)}
+@media (min-width:1000px){#v-accueil>.titre-sec,#v-accueil>.legend2,#v-accueil>.grid2{column-span:all}}
 </style>
 </head>
 <body>
@@ -1055,12 +1074,12 @@ function vAchats(){
   const mx=Math.max(...Object.values(parC),1);
   return `<div class="card">
     <div class="row between"><h3>Dépenses du mois</h3><span class="pill t-coral">${eur(sum(L,x=>x.montant))}</span></div>
-    <div class="grid2"><button class="btn ghost sm" data-act="import-releve">Importer mon relevé</button><button class="btn ghost sm" data-act="budgets-cat">Budgets par catégorie</button></div>
     ${Object.keys(B).length?`<div class="stack" style="gap:8px">${Object.entries(B).map(([k,lim])=>{const v=parC[k]||0,r=v/lim;return `<div class="stack" style="gap:3px"><div class="row between small"><span>${CAT_ACHAT[k]?.nom||k}</span><b style="color:${r>=1?"var(--neg)":"inherit"}">${eur(v)} / ${eur(lim)}</b></div><div class="hbar" style="height:9px"><span style="width:${Math.min(100,r*100)}%;background:${r>=1?"var(--coral)":r>=.8?"var(--sun)":"var(--mint)"}"></span></div></div>`}).join("")}</div>`:""}
     ${Object.keys(parC).length>1&&!Object.keys(B).length?Object.entries(parC).sort((p,q)=>q[1]-p[1]).map(([k,v])=>`<div class="stack" style="gap:3px"><div class="row between small"><span>${CAT_ACHAT[k]?.nom||"Autre"}</span><b>${eur(v)}</b></div><div class="hbar" style="height:9px"><span style="width:${v/mx*100}%;background:var(--${(CAT_ACHAT[k]||CAT_ACHAT.autre).c})"></span></div></div>`).join(""):""}
-    <div class="list">${L.slice(0,8).map(x=>`<button class="item" data-act="edit-achat" data-id="${x.id}"><span class="ico t-${catA(x).c}">${svg('<path d="M12 5v14M6 13l6 6 6-6"/>')}</span><span class="grow">${esc(x.nom||catA(x).nom)}<span class="sub">${catA(x).nom} · le ${fdate(new Date(x.date+"T00:00:00"),{day:"numeric",month:"long"})}</span></span><span class="amt" style="color:var(--neg)">−${eur(x.montant)}</span></button>`).join("")||`<span class="small muted">Aucune dépense ce mois. Touche « J'ai dépensé » après un achat.</span>`}</div>
-    ${L.length>8?`<details><summary>Voir les ${L.length-8} autres</summary><div class="list" style="margin-top:6px">${L.slice(8).map(x=>`<button class="item" data-act="edit-achat" data-id="${x.id}"><span class="grow">${esc(x.nom||catA(x).nom)}<span class="sub">le ${fdate(new Date(x.date+"T00:00:00"),{day:"numeric",month:"short"})}</span></span><span class="amt">−${eur(x.montant)}</span></button>`).join("")}</div></details>`:""}
+    ${Object.keys(parC).length>1?`<details class="repli"><summary><span class="grow small"><b>Voir les ${L.length} dépenses</b></span></summary><div class="list" style="margin-top:8px">${L.map(x=>`<button class="item" data-act="edit-achat" data-id="${x.id}"><span class="grow">${esc(x.nom||catA(x).nom)}<span class="sub">${catA(x).nom} · le ${fdate(new Date(x.date+"T00:00:00"),{day:"numeric",month:"short"})}</span></span><span class="amt">−${eur(x.montant)}</span></button>`).join("")}</div></details>`:`<div class="list">${L.slice(0,4).map(x=>`<button class="item" data-act="edit-achat" data-id="${x.id}"><span class="ico t-${catA(x).c}">${svg('<path d="M12 5v14M6 13l6 6 6-6"/>')}</span><span class="grow">${esc(x.nom||catA(x).nom)}<span class="sub">${catA(x).nom} · le ${fdate(new Date(x.date+"T00:00:00"),{day:"numeric",month:"long"})}</span></span><span class="amt" style="color:var(--neg)">−${eur(x.montant)}</span></button>`).join("")||`<span class="small muted">Aucune dépense ce mois. Touche « J'ai dépensé » après un achat.</span>`}</div>
+    ${L.length>4?`<details><summary>Voir les ${L.length-4} autres</summary><div class="list" style="margin-top:6px">${L.slice(4).map(x=>`<button class="item" data-act="edit-achat" data-id="${x.id}"><span class="grow">${esc(x.nom||catA(x).nom)}<span class="sub">le ${fdate(new Date(x.date+"T00:00:00"),{day:"numeric",month:"short"})}</span></span><span class="amt">−${eur(x.montant)}</span></button>`).join("")}</div></details>`:""}`}
     ${ks.length?`<details><summary>Mois précédents</summary><div class="list" style="margin-top:6px">${ks.map(k=>`<div class="item" style="cursor:default"><span class="grow">${fdate(new Date(k+"-01T00:00:00"),{month:"long",year:"numeric"})}</span><span class="amt">−${eur(anc[k])}</span></div>`).join("")}</div></details>`:""}
+  <div class="grid2"><button class="btn ghost sm" data-act="import-releve" style="font-size:.8rem">Importer un relevé</button><button class="btn ghost sm" data-act="budgets-cat" style="font-size:.8rem">Budgets par catégorie</button></div>
   </div>`;
 }
 function vRecus(){
@@ -1069,7 +1088,8 @@ function vRecus(){
   const ks=Object.keys(anciens).sort().reverse();
   return `<div class="card">
     <div class="row between"><h3>Argent reçu ce mois</h3><span class="pill t-mint">${eur(sum(mois,r=>r.montant))}</span></div>
-    <div class="list">${mois.map(r=>`<button class="item" data-act="edit-rev" data-id="${r.id}"><span class="ico t-mint">${svg('<path d="M12 19V5M6 11l6-6 6 6"/>')}</span><span class="grow">${esc(r.nom||"Argent reçu")}<span class="sub">Le ${fdate(new Date(r.date+"T00:00:00"),{day:"numeric",month:"long"})}</span></span><span class="amt" style="color:var(--pos)">+${eur(r.montant)}</span></button>`).join("")||`<span class="small muted">Rien reçu ce mois pour l'instant.</span>`}</div>
+    <div class="list">${mois.slice(0,3).map(r=>`<button class="item" data-act="edit-rev" data-id="${r.id}"><span class="ico t-mint">${svg('<path d="M12 19V5M6 11l6-6 6 6"/>')}</span><span class="grow">${esc(r.nom||"Argent reçu")}<span class="sub">Le ${fdate(new Date(r.date+"T00:00:00"),{day:"numeric",month:"long"})}</span></span><span class="amt" style="color:var(--pos)">+${eur(r.montant)}</span></button>`).join("")||`<span class="small muted">Rien reçu ce mois pour l'instant.</span>`}</div>
+    ${mois.length>3?`<details><summary>Voir les ${mois.length-3} autres</summary><div class="list" style="margin-top:6px">${mois.slice(3).map(r=>`<button class="item" data-act="edit-rev" data-id="${r.id}"><span class="grow">${esc(r.nom||"Argent reçu")}<span class="sub">Le ${fdate(new Date(r.date+"T00:00:00"),{day:"numeric",month:"long"})}</span></span><span class="amt">+${eur(r.montant)}</span></button>`).join("")}</div></details>`:""}
     ${ks.length?`<details><summary>Mois précédents</summary><div class="list" style="margin-top:6px">${ks.map(k=>`<div class="item" style="cursor:default"><span class="grow">${fdate(new Date(k+"-01T00:00:00"),{month:"long",year:"numeric"})}</span><span class="amt">${eur(anciens[k])}</span></div>`).join("")}</div></details>`:""}
   </div>`;
 }
@@ -1131,6 +1151,15 @@ function alertes(t){
     if(st.enRetard)out.push({niv:"warn",titre:`Objectif « ${o.nom} » en retard`,detail:st.texte,act:"obj:"+o.id})});
   (S.envies||[]).filter(e=>!e.achete&&e.cible).forEach(e=>{const m=meilleurPrix(e);if(m&&m.prix<=e.cible)out.push({niv:"good",titre:`${e.nom} à ${eur(m.prix)} chez ${m.marchand}`,detail:"Ton prix objectif est atteint.",act:"env:"+e.id})});
   const ord={bad:0,warn:1,good:2,info:3};return out.sort((p,q)=>ord[p.niv]-ord[q.niv]);
+}
+function vAVenir(t,proch){
+  const st={bad:["t-coral","!"],warn:["t-sun","!"],good:["t-mint","✓"],info:["t-sky","i"]};
+  const L=alertes(t).filter(x=>x.niv!=="info").slice(0,4);
+  if(!L.length&&!proch.length)return "";
+  return `<div class="card"><div class="row between"><h3>À venir</h3>${L.length?`<span class="pill t-coral">${L.length} à surveiller</span>`:""}</div><div class="list">
+    ${L.map(x=>`<button class="item" ${x.act?`data-act="alerte" data-id="${x.act}"`:'style="cursor:default"'}><span class="ico ${st[x.niv][0]}" style="width:36px;height:36px">${st[x.niv][1]}</span><span class="grow">${esc(x.titre)}${x.detail?`<span class="sub">${esc(x.detail)}</span>`:""}</span></button>`).join("")}
+    ${proch.map(o=>{const c=catOf(o.x),j=joursAvant(o.d);return `<button class="item" data-act="tab-abos"><span class="ico t-${c.c}" style="width:36px;height:36px">${svg(c.i)}</span><span class="grow">${esc(o.x.nom)}<span class="sub">${j===0?"Aujourd'hui":j===1?"Demain":"Le "+fdate(o.d,{day:"numeric",month:"long"})}</span></span><span class="amt">−${eur(o.x.montant)}</span></button>`}).join("")}
+  </div></div>`;
 }
 function vAlertes(t){
   const L=alertes(t);if(!L.length)return "";
@@ -1246,27 +1275,27 @@ function vAccueil(){
       <span class="big" style="color:${t.reste<0?"#ff8b7a":"#5ff0c8"}">${eur(t.reste)}</span>
       <span class="small" style="color:#b9c1e6">${eur(t.rev)} reçus en ${fdate(new Date(),{month:"long"})}</span>
     </div>
+    ${vide?"":`<div class="legend-hero">${parts.filter(p=>p.v>0.004&&p.n!=="Reste").map(p=>`<span><i style="background:${p.col}"></i>${p.n} <b>${eur(p.v)}</b></span>`).join("")}</div>`}
   </div>
-  <div class="legend">${parts.map(p=>`<span><i style="background:${p.col}"></i><span class="grow">${p.n}</span><b>${eur(p.v)}</b></span>`).join("")}</div>
-  ${vAlertes(t)}
-  ${vide?"":vConseil(t)}
-  ${t.reste<0?`<div class="tile t-coral"><b style="font-size:1.05rem">Tu dépenses plus que tu ne gagnes</b><span class="small">Regarde tes abonnements : c'est souvent là qu'on gagne le plus vite.</span></div>`:""}
   ${vide&&S.modePro?vPro():""}${vide?`<div class="card empty"><div class="ico t-mint" style="width:56px;height:56px">${svg('<path d="M12 5v14M5 12h14"/>')}</div><h3>Ajoute ton premier argent reçu</h3><span class="small">Dès que tu touches de l'argent (salaire, prime, vente…), ajoute la somme, peu importe le montant.</span><button class="btn mint" data-act="add-rev">+ Ajouter de l'argent</button></div>`:""}
   ${vide?"":`<div class="grid2"><button class="btn mint" data-act="add-rev" style="font-size:1.02rem;padding:16px 10px">+ Argent reçu</button><button class="btn coral" data-act="add-achat" style="font-size:1.02rem;padding:16px 10px">− J'ai dépensé</button></div>`}
+  ${vide?vAlertes(t):vAVenir(t,proch)}
   ${vide?"":vPro()}
-  ${vide?"":vBilanTuile()}
-  ${vide?"":vDefis()}
-  ${vide?"":vObjectifs()}
+  ${vide?"":`<h2 class="titre-sec">Ce mois-ci</h2>`}
   ${vide?"":vAchats()}
   ${vide?"":vRecus()}
+  ${vide?"":`<h2 class="titre-sec">Mon budget</h2>`}
   <div class="card">
-    <div class="row between"><h3>Dépenses fixes</h3><button class="btn ghost sm" data-act="add-dep">+ Ajouter</button></div>
-    <span class="small muted">Essence, crédit, participation maison… (les abonnements sont dans leur onglet)</span>
-    <div class="list">${S.depenses.map(r=>`<button class="item" data-act="edit-dep" data-id="${r.id}"><span class="ico t-sun">${svg('<path d="M12 5v14M6 13l6 6 6-6"/>')}</span><span class="grow">${esc(r.nom)}</span><span class="amt">−${eur(r.montant)}</span></button>`).join("")||`<span class="small muted">Aucune dépense fixe.</span>`}</div>
+    <button class="row between ligne-budget" data-act="add-dep"><span class="ico t-sun">${svg('<path d="M4 7h16M4 12h16M4 17h10"/>')}</span><span class="grow"><b>Dépenses fixes</b><span class="sub">${S.depenses.length?`${S.depenses.length} par mois · essence, crédit, loyer…`:"Essence, crédit, loyer… (les abonnements ont leur onglet)"}</span></span><b>${S.depenses.length?"−"+eur(t.dep):"+ Ajouter"}</b></button>
+    ${S.depenses.length?`<div class="list">${S.depenses.map(r=>`<button class="item" data-act="edit-dep" data-id="${r.id}"><span class="grow">${esc(r.nom)}</span><span class="amt">−${eur(r.montant)}</span></button>`).join("")}</div>`:""}
+    <button class="row between ligne-budget" data-act="budget-courses"><span class="ico t-coral">${svg('<path d="M3 4h2l2.4 11h11L21 7H6"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/>')}</span><span class="grow"><b>Budget courses</b><span class="sub">${t.budget?`Encore ${eur(t.courses)} à dépenser ce mois`:"Fixe un montant pour le mois"}</span></span><b>${t.budget?eur(t.budget):"Définir"}</b></button>
+    <button class="row between ligne-budget" data-act="tab-abos"><span class="ico t-grape">${svg('<path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>')}</span><span class="grow"><b>Abonnements et assurances</b><span class="sub">${S.abos.length} enregistré${S.abos.length>1?"s":""}</span></span><b>−${eur(t.abos+t.ass)}</b></button>
   </div>
-  <button class="tile t-coral" style="border:0;text-align:left;font:inherit;cursor:pointer" data-act="budget-courses">
-    <span class="lbl" style="color:inherit">Budget courses par mois</span><b>${eur(t.budget)}</b><span class="small">${t.budget?`Encore ${eur(t.courses)} à dépenser ce mois · touche pour modifier`:"Touche pour le définir"}</span></button>
-  ${proch.length?`<div class="card"><h3>Prochains prélèvements</h3><div class="list">${proch.map(o=>{const c=catOf(o.x),j=joursAvant(o.d);return `<div class="item" style="cursor:default"><span class="ico t-${c.c}">${svg(c.i)}</span><span class="grow">${esc(o.x.nom)}<span class="sub">${j===0?"Aujourd'hui":j===1?"Demain":"Le "+fdate(o.d,{day:"numeric",month:"long"})}</span></span><span class="amt">${eur(o.x.montant)}</span></div>`}).join("")}</div></div>`:""}`;
+  ${vide?"":`<h2 class="titre-sec">Épargne</h2>`}
+  ${vide?"":vObjectifs()}
+  ${vide?"":vConseil(t)}
+  ${vide?"":vDefis()}
+  ${vide?"":vBilanTuile()}`;
   brancherAnnonce();brancherBandeauInstall();
 }
 
@@ -1885,6 +1914,7 @@ const amis=()=>SOC.amities.filter(x=>x.statut==="ok").map(x=>{const o=x.membres.
 // bilan partageable, badges et défis
 // =====================================================================
 const NOUVEAUTES_APP=[
+  {id:"app-12",date:"2026-11-17",titre:"Un accueil plus clair",texte:"L'accueil est rangé en sections : à venir, ce mois-ci, mon budget et épargne. Les détails se replient pour aller à l'essentiel."},
   {id:"app-11",date:"2026-11-16",titre:"Plus rapide, même sans réseau",texte:"L'appli démarre plus vite, marche hors connexion (tes saisies partent au retour du réseau) et s'allège automatiquement sur les petits téléphones. Réglage « Effets de verre » dans Mon compte → Apparence."},
   {id:"app-10",date:"2026-11-16",titre:"Nouveau look « verre liquide »",texte:"Cartes translucides, reflets et barre de navigation flottante : l'appli fait peau neuve, en clair comme en sombre."},
   {id:"app-9",date:"2026-11-16",titre:"Installe l'appli en 3 gestes",texte:"Un guide animé montre où toucher pour mettre P'tite Éco sur ton écran d'accueil, que tu sois sur Android, Samsung, iPhone ou ordinateur."},
@@ -2125,12 +2155,11 @@ function defisDuMois(){
   ];
 }
 function vDefis(){
-  const D=defisDuMois(),nb=BADGES.filter(b=>{const [v,m]=b.prog();return v>=m}).length;
-  return `<div class="card">
-    <div class="row between"><h3>Défis de ${MOIS[new Date().getMonth()]}</h3><button class="btn ghost sm" data-act="badges">Badges ${nb}/${BADGES.length}</button></div>
-    ${D.map(d=>{const r=Math.min(1,d.v/d.max),col=d.inverse?(d.v>d.max?"var(--coral)":r>.8?"var(--sun)":"var(--mint)"):(d.ok?"var(--mint)":"var(--grape)");
-      return `<div class="stack" style="gap:4px"><div class="row between small"><span>${d.ok&&!d.inverse?"✓ ":""}${esc(d.n)}</span><b>${d.txt}</b></div><div class="hbar" style="height:9px"><span style="width:${Math.max(4,r*100)}%;background:${col}"></span></div></div>`}).join("")}
-  </div>`;
+  const D=defisDuMois(),nb=BADGES.filter(b=>{const [v,m]=b.prog();return v>=m}).length,ok=D.filter(d=>d.inverse?d.v<=d.max:d.ok).length;
+  const barres=D.map(d=>{const r=Math.min(1,d.v/d.max),col=d.inverse?(d.v>d.max?"var(--coral)":r>.8?"var(--sun)":"var(--mint)"):(d.ok?"var(--mint)":"var(--grape)");
+      return `<div class="stack" style="gap:4px"><div class="row between small"><span>${d.ok&&!d.inverse?"✓ ":""}${esc(d.n)}</span><b style="white-space:nowrap">${d.txt}</b></div><div class="hbar" style="height:8px"><span style="width:${Math.max(4,r*100)}%;background:${col}"></span></div></div>`}).join("");
+  return `<div class="card"><details class="repli"><summary><span class="ico t-grape" style="width:38px;height:38px">★</span><span class="grow"><b>Défis de ${MOIS[new Date().getMonth()]}</b><span class="sub">${ok}/${D.length} en bonne voie · badges ${nb}/${BADGES.length}</span></span></summary>
+    <div class="stack" style="gap:12px;margin-top:12px">${barres}<button class="btn ghost sm" data-act="badges" style="align-self:flex-start">Voir mes badges</button></div></details></div>`;
 }
 function badgesSheet(){
   const root=a("sheet-root");
