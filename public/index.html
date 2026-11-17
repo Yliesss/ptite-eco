@@ -396,6 +396,10 @@ details.repli>summary::-webkit-details-marker{display:none}
 details.repli>summary::after{content:"";width:9px;height:9px;border-right:2.5px solid var(--muted);border-bottom:2.5px solid var(--muted);transform:rotate(45deg);margin-right:6px;transition:transform .2s}
 details.repli[open]>summary::after{transform:rotate(-135deg)}
 @media (min-width:1000px){#v-accueil>.titre-sec,#v-accueil>.legend2,#v-accueil>.grid2{column-span:all}}
+.etu-sec{display:flex;flex-wrap:wrap;gap:6px}
+.etu-sec .btn{white-space:nowrap;flex:none}
+.tile .tb{font-size:1rem;font-weight:900;line-height:1.25}
+.tile .num{font-weight:900}
 </style>
 </head>
 <body>
@@ -1914,6 +1918,7 @@ const amis=()=>SOC.amities.filter(x=>x.statut==="ok").map(x=>{const o=x.membres.
 // bilan partageable, badges et défis
 // =====================================================================
 const NOUVEAUTES_APP=[
+  {id:"app-13",date:"2026-11-17",titre:"Études : tout est rangé, et une rubrique « Pas seul·e »",texte:"L'onglet Études est trié en 5 parties : campus, manger, se loger, argent et aides, et Pas seul·e, pour rencontrer du monde et trouver quelqu'un à qui parler (3040, Nightline, Santé Psy Étudiant…)."},
   {id:"app-12",date:"2026-11-17",titre:"Un accueil plus clair",texte:"L'accueil est rangé en sections : à venir, ce mois-ci, mon budget et épargne. Les détails se replient pour aller à l'essentiel."},
   {id:"app-11",date:"2026-11-16",titre:"Plus rapide, même sans réseau",texte:"L'appli démarre plus vite, marche hors connexion (tes saisies partent au retour du réseau) et s'allège automatiquement sur les petits téléphones. Réglage « Effets de verre » dans Mon compte → Apparence."},
   {id:"app-10",date:"2026-11-16",titre:"Nouveau look « verre liquide »",texte:"Cartes translucides, reflets et barre de navigation flottante : l'appli fait peau neuve, en clair comme en sombre."},
@@ -3036,6 +3041,9 @@ async function dessinerCarte(){
     setTimeout(()=>{try{map.invalidateSize()}catch(x){}},250);
   }catch(x){console.warn("carte",x);el.innerHTML=`<div class="note" style="margin:12px">La carte n'a pas pu s'afficher. <a href="${lienPlan(c)}" target="_blank" rel="noopener">Ouvrir le plan</a></div>`}
 }
+let ETU_SEC_COURANTE=null;
+function etuSec(v){if(v){ETU_SEC_COURANTE=v;try{localStorage.setItem("pm-etu-sec",v)}catch(e){}return v}
+  if(!ETU_SEC_COURANTE){try{ETU_SEC_COURANTE=localStorage.getItem("pm-etu-sec")}catch(e){}}return ETU_SEC_COURANTE||"campus"}
 function vEtudes(){
   const el=a("v-etudes");if(!el)return;
   const e=etu();if(e.univ&&!pointOk(e.univ)){delete e.univ;persist()}
@@ -3048,8 +3056,9 @@ function vEtudes(){
   const ligneResto=x=>`<button class="item" data-ru="${esc(x.id||x.title)}"><span class="ico t-mint">${svg('<path d="M4 13h16a8 8 0 0 1-16 0zM12 5v3M8 6v2M16 6v2"/>')}</span><span class="grow">${esc(x.title||"Restaurant Crous")}<span class="sub">${esc(x.type||"Resto U")} · ${fDist(x.d)}${aPied(x.d)}</span></span><span class="pill t-mint">1 €</span></button>`;
   const CHECK=[["dse","Dossier social étudiant (bourse / logement) déposé"],["izly","Compte Izly créé (pour payer au resto U)"],["cvec","CVEC payée"],["caf","Aide au logement CAF demandée"],["sante","Complémentaire santé vérifiée"],["transport","Abonnement transport à tarif étudiant"]];
   const nbOk=CHECK.filter(x=>e.check?.[x[0]]).length;
-  el.innerHTML=`
-  ${e.univ?`<button class="mur-lien" data-tab="campus"><span class="mur-ico">${svg(icoTab("campus"))}</span><span class="mur-txt"><b>Le mur de ta fac</b><span>Ventes, soirées, infos, entraide</span></span><span class="mur-go">${svg('<path d="M9 6l6 6-6 6"/>')}</span></button>`:""}
+  const sec=etuSec();
+  const ETU_SEC={
+    campus:()=>`  ${e.univ?`<button class="mur-lien" data-tab="campus"><span class="mur-ico">${svg(icoTab("campus"))}</span><span class="mur-txt"><b>Le mur de ta fac</b><span>Ventes, soirées, infos, entraide</span></span><span class="mur-go">${svg('<path d="M9 6l6 6-6 6"/>')}</span></button>`:""}
   <div class="card" style="background:linear-gradient(160deg,var(--grape-s),var(--surface) 70%)">
     <div class="row between"><h3>Mon établissement</h3>${e.univ?`<button class="btn ghost sm" id="eu-chg">Changer</button>`:""}</div>
     ${e.univ?`<div><b style="font-size:1.08rem">${esc(e.univ.nom)}</b><span class="sub">${esc([e.univ.ville,e.univ.type].filter(Boolean).join(" · "))}</span></div>
@@ -3069,7 +3078,11 @@ function vEtudes(){
     <div id="eu-map" style="height:320px;border-radius:16px;overflow:hidden;background:var(--soft);z-index:0"></div>
     <div class="row small muted" style="gap:12px;flex-wrap:wrap"><span><i class="pt" style="background:#1d2547"></i>École</span><span><i class="pt" style="background:#ff6b57"></i>Chez moi</span><span><i class="pt" style="background:#16c19a"></i>Resto U</span><span><i class="pt" style="background:#e2580b"></i>Métro</span><span><i class="pt" style="background:#8e5cf7"></i>Tram</span><span><i class="pt" style="background:#3b8cff"></i>Bus</span></div>
   </div>`:""}
-  <div class="tile t-mint">
+  <div class="card">
+    <div class="row between"><h3>Mes démarches</h3><span class="pill ${nbOk===CHECK.length?"t-mint":"t-grape"}">${nbOk}/${CHECK.length}</span></div>
+    ${CHECK.map(([k,n])=>`<label class="row" style="gap:10px;padding:4px 0;font-weight:700"><input type="checkbox" data-euc="${k}" ${e.check?.[k]?"checked":""} style="width:22px;height:22px;flex:none">${n}</label>`).join("")}
+  </div>`,
+    manger:()=>`  <div class="tile t-mint">
     <b style="font-size:1.05rem">Le repas au resto U coûte 1 €</b>
     <span class="small">Depuis le 4 mai 2026, c'est 1 € pour tous les étudiants, boursiers ou non : un repas par jour (plat + 2 accompagnements), payé avec Izly. Midi au resto U 5 jours sur 7 au lieu d'un repas à environ 6 € : <span style="font-weight:900">près de 100 € économisés par mois</span>.</span>
     ${ext("https://www.izly.fr/","Créer mon compte Izly","btn mint sm")}
@@ -3080,6 +3093,14 @@ function vEtudes(){
     ${restos.length?`<div class="list">${restos.slice(0,6).map(ligneResto).join("")}</div>${restos.length>6?`<details><summary>Voir les ${restos.length-6} autres</summary><div class="list" style="margin-top:6px">${restos.slice(6).map(ligneResto).join("")}</div></details>`:""}`:c&&!ETU.charge.r&&!ETU.err.r&&ETU.restos?`<span class="small muted">Aucun resto U trouvé à moins de 15 km.</span>`:""}
   </div>
   <div class="card">
+    <h3>Manger moins cher</h3>
+    <div class="list">
+      <button class="item" data-tab="repas"><span class="ico t-mint">${svg('<path d="M4 13h16a8 8 0 0 1-16 0zM12 5v3M8 6v2M16 6v2"/>')}</span><span class="grow"><b>Repas pas chers</b><span class="sub">Idées de repas et menu de la semaine selon ton budget.</span></span></button>
+      <a class="item" href="https://www.google.com/search?q=${encodeURIComponent("épicerie solidaire étudiante "+(e.univ?.ville||""))}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="ico t-sun">${svg('<path d="M6 7h12l1 14H5zM9 7a3 3 0 0 1 6 0"/>')}</span><span class="grow"><b>Épiceries solidaires étudiantes</b><span class="sub">Des courses à petit prix pour les étudiants qui en ont besoin.</span></span><span class="small" style="color:var(--link)">Ouvrir</span></a>
+    </div>
+  </div>
+`,
+    loger:()=>`  <div class="card">
     <h3>Transports près de chez toi</h3>
     ${!(e.maison||e.univ)?`<span class="small muted">Indique ton adresse pour voir les arrêts proches.</span>`:ETU.charge.t?charge():erreur("t")}
     ${!e.maison&&e.univ&&trans.length?`<span class="sub">Autour de ton établissement (indique ton adresse pour voir ceux de chez toi).</span>`:""}
@@ -3097,7 +3118,8 @@ function vEtudes(){
       ["https://www.immojeune.com/","ImmoJeune","Annonces de logements étudiants et colocations"]
     ].map(([u,n,d])=>`<a class="item" href="${u}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="grow"><b>${n}</b><span class="sub">${d}</span></span><span class="small" style="color:var(--link)">Ouvrir</span></a>`).join("")}</div>
   </div>
-  <div class="card">
+`,
+    aides:()=>`  <div class="card">
     <h3>Bourses et aides</h3>
     <div class="tile t-sky"><b style="font-size:1rem">Bourse du Crous : fais ta demande chaque année</b><span class="small">Le dossier social étudiant (DSE) sert à demander la bourse et un logement Crous. Il s'ouvre en général fin janvier et ferme le 31 mai pour l'année suivante. Dépose-le même si tu n'es pas sûr d'y avoir droit.</span></div>
     <div class="list">${[
@@ -3108,23 +3130,68 @@ function vEtudes(){
       ["https://www.jobaviz.fr/","Jobaviz","Jobs étudiants proposés par le Crous"],
       ["https://cvec.etudiant.gouv.fr/","CVEC","Contribution à payer à l'inscription (exonérée pour les boursiers)"]
     ].map(([u,n,d])=>`<a class="item" href="${u}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="grow"><b>${n}</b><span class="sub">${d}</span></span><span class="small" style="color:var(--link)">Ouvrir</span></a>`).join("")}</div>
-    <span class="sub">En difficulté passagère ? L'assistante sociale du Crous peut accorder une aide d'urgence : demande un rendez-vous auprès du Crous de ta ville.</span>
+    <span class="sub">Conseils généraux : les montants et calendriers changent, vérifie toujours sur les sites officiels.</span>
+  </div>
+
+  <div class="card">
+    <h3>Coup dur ? Il existe des aides d'urgence</h3>
+    <div class="list">${[
+      ["https://www.service-public.gouv.fr/particuliers/actualites/A15920","Aide d'urgence du Crous","Aide spécifique ponctuelle : versée en une fois si tu as une difficulté passagère, même sans être boursier. Demande-la au service social du Crous."],
+      ["https://www.google.com/search?q="+encodeURIComponent("aides sociales étudiants "+(e.univ?.nom||"mon université")),"Les aides de "+(e.univ?esc(e.univ.nom):"ton université"),"Beaucoup d'écoles ont leurs propres aides : fonds d'urgence, bons alimentaires, prêt d'ordinateur… Va voir le service social ou vie étudiante."],
+      ["https://www.google.com/search?q="+encodeURIComponent("épicerie solidaire étudiante "+(e.univ?.ville||"")),"Épiceries solidaires étudiantes","Des courses à petit prix (AGORAé et autres), réservées aux étudiants qui en ont besoin."]
+    ].map(([u,n,d])=>`<a class="item" href="${u}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="grow"><b>${n}</b><span class="sub">${d}</span></span><span class="small" style="color:var(--link)">Ouvrir</span></a>`).join("")}</div>
+    <div class="tile t-sky"><span class="tb">Le 3040 : un seul numéro pour les étudiants en difficulté</span><span class="small">Gratuit et confidentiel, en journée : des psychologues, éducateurs et juristes t'écoutent et t'orientent (argent, logement, moral, droits).</span><a class="btn sm" style="background:var(--sky);align-self:flex-start;text-decoration:none" href="tel:3040">Appeler le 3040</a></div>
+  </div>
+`,
+    moral:()=>`
+  <div class="tile t-grape">
+    <span class="tb" style="font-size:1.05rem">Tu te sens seul·e ? Tu n'es pas le seul ni la seule.</span>
+    <span class="small">Loin de sa famille, nouvelle ville, pas encore d'amis à la fac : c'est très courant chez les étudiants. Voici des façons simples de recréer du lien, et des gens à qui parler si ça pèse.</span>
   </div>
   <div class="card">
-    <div class="row between"><h3>Mes démarches</h3><span class="pill ${nbOk===CHECK.length?"t-mint":"t-grape"}">${nbOk}/${CHECK.length}</span></div>
-    ${CHECK.map(([k,n])=>`<label class="row" style="gap:10px;padding:4px 0;font-weight:700"><input type="checkbox" data-euc="${k}" ${e.check?.[k]?"checked":""} style="width:22px;height:22px;flex:none">${n}</label>`).join("")}
-  </div>`;
+    <h3>Rencontrer du monde</h3>
+    <div class="list">
+      ${e.univ?`<button class="item" data-tab="campus"><span class="ico t-coral">${svg(icoTab("campus"))}</span><span class="grow"><b>Rejoins un groupe ou une asso</b><span class="sub">BDE, BDS, clubs… abonne-toi sur le mur de ton campus et va à leur prochain événement.</span></span></button>
+      <button class="item" data-tab="campus"><span class="ico t-mint">${svg('<path d="M12 5v14M5 12h14"/>')}</span><span class="grow"><b>Propose une sortie sur le mur</b><span class="sub">« Quelqu'un pour un café, un ciné, réviser à la BU ? » : publie dans Entraide ou Soirées.</span></span></button>`
+      :`<button class="item" data-sec="campus"><span class="ico t-coral">${svg(icoTab("campus"))}</span><span class="grow"><b>Choisis ton établissement</b><span class="sub">Pour accéder au mur de ton campus : groupes, assos, sorties.</span></span></button>`}
+      <button class="item" data-act="inviter"><span class="ico t-sky">${svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M18 8v6M15 11h6"/>')}</span><span class="grow"><b>Invite quelqu'un de ta promo</b><span class="sub">Un camarade de TD, un voisin de résidence : c'est plus simple de commencer à deux.</span></span></button>
+      <a class="item" href="https://www.google.com/search?q=${encodeURIComponent("sport universitaire SUAPS "+(e.univ?.nom||""))}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="ico t-sun">${svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>')}</span><span class="grow"><b>Fais du sport à la fac</b><span class="sub">Le service des sports de ton université propose des cours gratuits ou presque : idéal pour se faire des amis.</span></span><span class="small" style="color:var(--link)">Ouvrir</span></a>
+      <a class="item" href="https://www.jeveuxaider.gouv.fr/" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="ico t-pink">${svg('<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>')}</span><span class="grow"><b>Deviens bénévole près de chez toi</b><span class="sub">Quelques heures par mois avec d'autres gens, pour une cause qui te parle.</span></span><span class="small" style="color:var(--link)">Ouvrir</span></a>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Parler à quelqu'un</h3>
+    <span class="small muted">Gratuit et confidentiel. Pas besoin d'aller « très mal » pour appeler.</span>
+    <div class="list">
+      <a class="item" href="tel:3040" style="text-decoration:none;color:inherit"><span class="ico t-sky" style="font-weight:900;font-size:.8rem">3040</span><span class="grow"><b>Le 3040</b><span class="sub">En journée : psychologues, éducateurs et juristes pour les étudiants en difficulté.</span></span><span class="small" style="color:var(--link)">Appeler</span></a>
+      <a class="item" href="https://www.nightline.fr/" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="ico t-grape">${svg('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>')}</span><span class="grow"><b>Nightline</b><span class="sub">Le soir de 21 h à 2 h 30 : des étudiants formés t'écoutent, par téléphone ou par tchat, de façon anonyme.</span></span><span class="small" style="color:var(--link)">Ouvrir</span></a>
+      <a class="item" href="https://santepsy.etudiant.gouv.fr/" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="ico t-mint">${svg('<path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/><path d="M9 12h6M12 9v6"/>')}</span><span class="grow"><b>Santé Psy Étudiant</b><span class="sub">Jusqu'à 12 séances gratuites par an avec un psychologue, sans avance de frais.</span></span><span class="small" style="color:var(--link)">Ouvrir</span></a>
+      <a class="item" href="https://www.google.com/search?q=${encodeURIComponent("service de santé étudiante "+(e.univ?.nom||"université"))}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="ico t-coral">${svg('<path d="M12 5v14M5 12h14"/>')}</span><span class="grow"><b>Le service de santé de ${e.univ?esc(e.univ.nom):"ton université"}</b><span class="sub">Médecins, psychologues, infirmiers sur le campus, souvent gratuits pour les étudiants.</span></span><span class="small" style="color:var(--link)">Ouvrir</span></a>
+      <a class="item" href="https://www.filsantejeunes.com/" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="ico t-sun">${svg('<path d="M4 5h16v11H8l-4 4z"/>')}</span><span class="grow"><b>Fil Santé Jeunes</b><span class="sub">Pour les 12-25 ans : écoute, tchat et infos sur le moral, la santé, les relations.</span></span><span class="small" style="color:var(--link)">Ouvrir</span></a>
+    </div>
+  </div>
+  <div class="tile t-coral">
+    <span class="tb">Si tu penses au suicide ou que tu es en danger</span>
+    <span class="small">Appelle le <span class="num">3114</span> (gratuit, 24 h/24, 7 j/7). En cas d'urgence immédiate : le <span class="num">15</span> ou le <span class="num">112</span>.</span>
+    <a class="btn sm" style="background:var(--coral);align-self:flex-start;text-decoration:none" href="tel:3114">Appeler le 3114</a>
+  </div>
+`
+  };
+  el.innerHTML=`
+  <div class="etu-sec" role="tablist">${[["campus","🏫 Mon campus"],["manger","🍽️ Manger"],["loger","🏠 Se loger, bouger"],["aides","💶 Argent et aides"],["moral","💜 Pas seul·e"]].map(([k,n])=>`<button class="btn sm ${k===sec?"":"ghost"}" role="tab" aria-selected="${k===sec}" data-sec="${k}" style="${k===sec?"background:var(--grape)":""}">${n}</button>`).join("")}</div>
+  ${sec==="campus"?ETU_SEC.campus():sec==="manger"?ETU_SEC.manger():sec==="loger"?ETU_SEC.loger():sec==="aides"?ETU_SEC.aides():ETU_SEC.moral()}`;
   // branchements
   if(a("eu-chg"))a("eu-chg").onclick=()=>{delete e.univ;persist();vEtudes()};
   if(a("eu-f"))a("eu-f").onsubmit=async ev=>{ev.preventDefault();const q=a("eu-q").value.trim(),res=a("eu-res");if(q.length<2)return;res.innerHTML=charge();
     try{afficherUnivs(chercherUnivs(await tousEtablissements(),q),null)}catch(x){res.innerHTML=`<div class="note">${esc(x.message)}</div>`}};
   if(a("eu-pos"))a("eu-pos").onclick=async()=>{const res=a("eu-res");res.innerHTML=`<span class="small muted">Recherche de ta position…</span>`;
     try{const [p,l]=await Promise.all([maPosition(),tousEtablissements()]);afficherUnivs(l.map(u=>({...u,d:distKm(p.lat,p.lon,u.lat,u.lon)})).sort((x,y)=>x.d-y.d).slice(0,12),p)}catch(x){res.innerHTML=`<div class="note">${esc(x.message)}</div>`}};
-  a("eu-maison").onclick=maisonSheet;
+  if(a("eu-maison"))a("eu-maison").onclick=maisonSheet;
+  el.querySelectorAll("[data-sec]").forEach(b=>b.onclick=()=>{etuSec(b.dataset.sec);vEtudes();scrollTo({top:0})});
   el.querySelectorAll("[data-euf]").forEach(b=>b.onclick=()=>{F_[b.dataset.euf]=!F_[b.dataset.euf];persist();vEtudes()});
   el.querySelectorAll("[data-euc]").forEach(b=>b.onchange=()=>{e.check=e.check||{};if(b.checked)e.check[b.dataset.euc]=iso(new Date());else delete e.check[b.dataset.euc];persist();vEtudes()});
   el.querySelectorAll("[data-ru]").forEach(b=>b.onclick=()=>restoSheet(restos.find(x=>(x.id||x.title)==b.dataset.ru)));
-  if(c)dessinerCarte();
+  if(c&&a("eu-map"))dessinerCarte();
 }
 function afficherUnivs(l,p){
   const res=a("eu-res");if(!res)return;
