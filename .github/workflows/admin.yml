@@ -1,0 +1,32 @@
+name: Rendre admin un compte
+on:
+  workflow_dispatch:
+    inputs:
+      empreinte:
+        description: "SHA-256 de l'adresse e-mail (l'adresse elle-même n'apparaît jamais ici)"
+        required: true
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ajouter dans la collection admins
+        env:
+          CLE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          EMPREINTE: ${{ inputs.empreinte }}
+        run: |
+          echo "$CLE" > $RUNNER_TEMP/cle.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/cle.json
+          npm i firebase-admin@12 --silent --no-audit --no-fund >/dev/null
+          cat > a.js <<'JS'
+          const a=require("firebase-admin"),crypto=require("crypto");a.initializeApp({projectId:"mon-porte-monnaie-e3f0a"});
+          (async()=>{
+            const h=e=>crypto.createHash("sha256").update((e||"").toLowerCase()).digest("hex");
+            let tok,trouve=[];
+            do{const r=await a.auth().listUsers(1000,tok);trouve.push(...r.users.filter(u=>h(u.email)===process.env.EMPREINTE));tok=r.pageToken}while(tok);
+            console.log("COMPTES_TROUVES",trouve.length);
+            const db=a.firestore();
+            console.log("ADMINS_AVANT",(await db.collection("admins").count().get()).data().count);
+            for(const u of trouve){await db.collection("admins").doc(u.uid).set({depuis:new Date().toISOString()},{merge:true});console.log("AJOUTE")}
+          })().catch(e=>{console.log("ERREUR",e.code,e.message);process.exit(1)});
+          JS
+          node a.js
